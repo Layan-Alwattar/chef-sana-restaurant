@@ -1,0 +1,397 @@
+body {
+  font-family: 'Cormorant Garamond', 'Segoe UI', serif;
+  background: #f0f2f5;
+  margin: 0;
+  padding: 0;
+  font-size: 1.05rem;
+}
+
+h1 {
+  font-family: 'Playfair Display', 'Cormorant Garamond', serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 2.6rem;
+  letter-spacing: 1px;
+  text-align: center;
+  color: #1a1a1a;
+  background: linear-gradient(90deg, #b8860b 0%, #d4af37 50%, #8b6914 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0.5rem 0 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d4af37;
+}
+
+h3 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+}
+
+nav {
+  background-color: #222;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  margin: 0 0.5rem;
+  font-weight: bold;
+}
+
+.lang-switcher {
+  margin-inline-start: auto;
+}
+
+.lang-switcher select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  border: none;
+  background: #fff;
+  color: #222;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.container.narrow {
+  max-width: 480px;
+}
+
+.delete-btn {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.actions-btns {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+#meals-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.meal-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tag {
+  background-color: #e0f7fa;
+  color: #00796b;
+  padding: 0.3rem 0.6rem;
+  margin-inline-end: 0.4rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  display: inline-block;
+}
+
+.clickable-tag {
+  cursor: pointer;
+  user-select: none;
+}
+
+.clickable-tag:hover {
+  background-color: #b2ebf2;
+}
+
+.stars {
+  color: #ff9800;
+  font-size: 1.2rem;
+}
+
+.stars.small {
+  font-size: 1rem;
+}
+
+.meta-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  color: #444;
+  margin: 0.25rem 0;
+}
+
+button {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.description.hidden {
+  display: none;
+}
+
+.description {
+  margin-top: 0.75rem;
+  font-style: italic;
+}
+
+.search-box {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: #222;
+  color: #fff;
+  margin-top: 2rem;
+}
+
+form input,
+form textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+form button {
+  width: fit-content;
+  align-self: flex-start;
+  padding: 0.75rem 1.5rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* ----- Reviews ----- */
+.reviews-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #ddd;
+}
+
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.reviews-section h4 {
+  margin: 0;
+  color: #333;
+  font-family: 'Playfair Display', serif;
+}
+
+html[dir="rtl"] .reviews-section h4 {
+  font-family: 'Amiri', serif;
+}
+
+.toggle-reviews-btn {
+  margin: 0;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.85rem;
+  background-color: #6c757d;
+}
+
+.toggle-reviews-btn:hover {
+  background-color: #5a6268;
+}
+
+.reviews-body.hidden {
+  display: none;
+}
+
+.reviews-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 0.75rem;
+}
+
+.review {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.review-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.review-comment {
+  margin: 0.25rem 0;
+}
+
+.review-date {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.no-reviews {
+  color: #888;
+  font-style: italic;
+  margin: 0.5rem 0;
+}
+
+.review-form .rating-label {
+  font-weight: bold;
+  color: #333;
+}
+
+.stars-row {
+  font-size: 1.4rem;
+  color: #ccc;
+  letter-spacing: 2px;
+}
+
+.stars-row .star {
+  cursor: default;
+}
+
+.stars-row.interactive .star {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.stars-row .star.filled {
+  color: #ff9800;
+}
+
+.stars-row.interactive .star:hover {
+  color: #ffb74d;
+}
+
+/* ----- Admin login ----- */
+.admin-form {
+  margin-top: 1rem;
+}
+
+.error {
+  color: #c62828;
+  font-weight: bold;
+}
+
+.error.hidden {
+  display: none;
+}
+
+/* ----- Summary ----- */
+.summary-grid .card {
+  text-align: center;
+  background-color: #f5f5f5;
+  padding: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #444;
+  border-left: 6px solid #00bcd4;
+  border-radius: 10px;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.summary-table th {
+  background-color: #007bff;
+  color: white;
+}
+
+/* ----- RTL adjustments ----- */
+html[dir="rtl"] body {
+  font-family: 'Amiri', 'Segoe UI', 'Tahoma', serif;
+}
+
+html[dir="rtl"] h1,
+html[dir="rtl"] h3 {
+  font-family: 'Amiri', 'Playfair Display', serif;
+  font-style: normal;
+}
+
+html[dir="rtl"] .summary-grid .card {
+  border-left: none;
+  border-right: 6px solid #00bcd4;
+}
+
+html[dir="rtl"] .lang-switcher {
+  margin-inline-start: auto;
+}
