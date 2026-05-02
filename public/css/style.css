@@ -411,3 +411,79 @@ html[dir="rtl"] .summary-grid .card {
 html[dir="rtl"] .lang-switcher {
   margin-inline-start: auto;
 }
+
+/* ----- Image picker (add/edit form) ----- */
+.image-picker {
+  border: 1px dashed #c4c4c4;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.image-picker .picker-label {
+  font-weight: bold;
+  color: #333;
+  font-family: 'Playfair Display', serif;
+}
+
+html[dir="rtl"] .image-picker .picker-label {
+  font-family: 'Amiri', serif;
+}
+
+.image-picker .picker-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.image-picker .file-button {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  background-color: #4caf50;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.image-picker .file-button:hover {
+  background-color: #43a047;
+}
+
+.image-picker .picker-hint {
+  margin: 0;
+  color: #777;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.image-preview-wrap {
+  position: relative;
+  display: inline-block;
+  margin-top: 0.25rem;
+  max-width: 100%;
+}
+
+.image-preview-wrap img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  display: block;
+}
+
+.remove-img-btn {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  background-color: #c62828;
+  font-size: 0.85rem;
+}
+
+.remove-img-btn:hover {
+  background-color: #a32020;
+}

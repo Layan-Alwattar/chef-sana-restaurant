@@ -5,6 +5,63 @@ function saveMeals(meals) {
   localStorage.setItem("meals", JSON.stringify(meals));
 }
 
+const MAX_IMAGE_WIDTH = 1000;   // downscale uploads/pastes so localStorage stays small
+const JPEG_QUALITY = 0.85;
+
+// Read a File/Blob, downscale to MAX_IMAGE_WIDTH if larger, return a JPEG data URL.
+function fileToResizedDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(1, MAX_IMAGE_WIDTH / img.width);
+        const w = Math.round(img.width * ratio);
+        const h = Math.round(img.height * ratio);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        try {
+          resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function setImageValue(value) {
+  const hidden = document.getElementById("image");
+  const preview = document.getElementById("image-preview");
+  const wrap = document.getElementById("preview-wrap");
+  hidden.value = value || "";
+  if (value) {
+    preview.src = value;
+    wrap.hidden = false;
+  } else {
+    preview.removeAttribute("src");
+    wrap.hidden = true;
+  }
+}
+
+async function handleFile(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  try {
+    const dataUrl = await fileToResizedDataUrl(file);
+    setImageValue(dataUrl);
+    document.getElementById("image-url").value = "";
+  } catch (err) {
+    console.error("Failed to process image:", err);
+    alert("Could not read image.");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   const editing = JSON.parse(localStorage.getItem("editingMeal"));
   if (editing) {
@@ -16,9 +73,51 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("calories").value = editing.calories;
     document.getElementById("description").value = editing.description;
     document.getElementById("satisfaction").value = editing.satisfaction;
-    document.getElementById("image").value = editing.image || "";
+    if (editing.image) {
+      setImageValue(editing.image);
+      // If it's a normal URL (not a data URL), echo it into the URL field so it stays editable.
+      if (!editing.image.startsWith("data:")) {
+        document.getElementById("image-url").value = editing.image;
+      }
+    }
     localStorage.removeItem("editingMeal");
   }
+
+  // File chooser
+  document.getElementById("image-file").addEventListener("change", e => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleFile(file);
+  });
+
+  // Manual URL entry
+  document.getElementById("image-url").addEventListener("input", e => {
+    const url = e.target.value.trim();
+    if (url) setImageValue(url);
+    else if (!document.getElementById("image-file").files[0]) setImageValue("");
+  });
+
+  // Remove button
+  document.getElementById("image-remove").addEventListener("click", () => {
+    setImageValue("");
+    document.getElementById("image-file").value = "";
+    document.getElementById("image-url").value = "";
+  });
+
+  // Paste an image from the clipboard anywhere on the page (Ctrl/⌘ + V).
+  document.addEventListener("paste", async e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          await handleFile(file);
+          e.preventDefault();
+          return;
+        }
+      }
+    }
+  });
 });
 
 document.getElementById("meal-form").addEventListener("submit", function (e) {
@@ -43,7 +142,14 @@ document.getElementById("meal-form").addEventListener("submit", function (e) {
   const updated = meals.some(m => m.id === meal.id)
     ? meals.map(m => m.id === meal.id ? meal : m)
     : [...meals, meal];
-  saveMeals(updated);
+  try {
+    saveMeals(updated);
+  } catch (err) {
+    // QuotaExceededError typically means localStorage filled with too many big images.
+    alert("Storage is full — try removing old meals or using a smaller image.");
+    console.error(err);
+    return;
+  }
   alert(t("mealSaved"));
   window.location.href = "../index.html";
 });

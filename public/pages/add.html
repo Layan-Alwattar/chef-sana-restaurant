@@ -43,7 +43,20 @@
       <textarea id="description" data-i18n-placeholder="mealDescription" placeholder="Meal Description"></textarea>
       <input type="number" id="satisfaction" data-i18n-placeholder="mealSatisfaction" placeholder="Satisfaction (1-5)"
         min="1" max="5" />
-      <input type="url" id="image" data-i18n-placeholder="mealImage" placeholder="Image URL" />
+      <div class="image-picker" id="image-picker">
+        <label class="picker-label" data-i18n="imagePickerTitle">Meal photo</label>
+        <div class="picker-controls">
+          <label class="file-button" for="image-file" data-i18n="imageUpload">Choose file</label>
+          <input type="file" id="image-file" accept="image/*" hidden />
+        </div>
+        <p class="picker-hint" data-i18n="imagePasteHint">or paste an image with Ctrl + V</p>
+        <input type="url" id="image-url" data-i18n-placeholder="imageOrUrl" placeholder="or paste an image URL" />
+        <div class="image-preview-wrap" id="preview-wrap" hidden>
+          <img id="image-preview" alt="" />
+          <button type="button" id="image-remove" class="remove-img-btn" data-i18n="imageRemove">Remove image</button>
+        </div>
+        <input type="hidden" id="image" />
+      </div>
       <button type="submit" data-i18n="saveMeal">Save Meal</button>
     </form>
   </div>
