@@ -54,8 +54,8 @@ const I18N = {
     pleaseRate: "Please choose a star rating.",
     pleaseName: "Please enter your name.",
     pleaseComment: "Please enter a comment.",
-    footer: "NutriSnap © 2025. Built with 💚 for Health & Simplicity.",
-    footerShort: "NutriSnap © 2025"
+    footer: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا",
+    footerShort: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا"
   },
   ar: {
     appTitle: "مطعم الشيف سنا",
@@ -111,8 +111,8 @@ const I18N = {
     pleaseRate: "يرجى اختيار تقييم بالنجوم.",
     pleaseName: "يرجى إدخال اسمك.",
     pleaseComment: "يرجى إدخال تعليق.",
-    footer: "نوتري سناب © 2025. صُنع بحب 💚 من أجل الصحة والبساطة.",
-    footerShort: "نوتري سناب © 2025"
+    footer: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا",
+    footerShort: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا"
   }
 };
 
