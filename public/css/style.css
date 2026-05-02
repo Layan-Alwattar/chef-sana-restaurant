@@ -1,9 +1,25 @@
+html, body {
+  height: 100%;
+}
+
 body {
   font-family: 'Cormorant Garamond', 'Segoe UI', serif;
   background: #f0f2f5;
   margin: 0;
   padding: 0;
   font-size: 1.05rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Push the footer to the bottom of the viewport even on short pages. */
+.container {
+  flex: 1 0 auto;
+}
+
+footer {
+  flex-shrink: 0;
 }
 
 h1 {
