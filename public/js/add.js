@@ -5,6 +5,46 @@ function saveMeals(meals) {
   localStorage.setItem("meals", JSON.stringify(meals));
 }
 
+// Tag chip state. Splits on both English ',' and Arabic '،' so pasted lists
+// like "vegan, healthy ، خضار" all become individual chips.
+let tagsList = [];
+const TAG_SPLIT = /[,،]+/;
+
+function escHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderTagChips() {
+  const wrap = document.getElementById("tag-chips");
+  if (!wrap) return;
+  wrap.innerHTML = tagsList.map((tag, i) => `
+    <span class="tag-chip">
+      <span class="tag-chip-text">#${escHtml(tag)}</span>
+      <button type="button" class="tag-chip-remove" data-index="${i}" data-i18n-title="removeTag" title="Remove tag" aria-label="Remove">×</button>
+    </span>
+  `).join("");
+  wrap.querySelectorAll(".tag-chip-remove").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-index"));
+      tagsList.splice(idx, 1);
+      renderTagChips();
+    });
+  });
+}
+
+function addTagsFromInput(rawText) {
+  if (!rawText) return;
+  const parts = rawText.split(TAG_SPLIT).map(s => s.trim()).filter(Boolean);
+  let added = false;
+  parts.forEach(p => {
+    if (!tagsList.includes(p)) {
+      tagsList.push(p);
+      added = true;
+    }
+  });
+  if (added) renderTagChips();
+}
+
 const MAX_IMAGE_WIDTH = 1000;   // downscale uploads/pastes so localStorage stays small
 const JPEG_QUALITY = 0.85;
 
@@ -69,7 +109,8 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("page-title").textContent = t("pageTitleEdit");
     document.getElementById("meal-id").value = editing.id;
     document.getElementById("title").value = editing.title;
-    document.getElementById("tags").value = (editing.tags || []).join(", ");
+    tagsList = Array.isArray(editing.tags) ? [...editing.tags] : [];
+    renderTagChips();
     document.getElementById("calories").value = editing.calories;
     document.getElementById("description").value = editing.description;
     document.getElementById("satisfaction").value = editing.satisfaction;
@@ -82,6 +123,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     localStorage.removeItem("editingMeal");
   }
+
+  // Tag entry: + button and Enter both add the current input as a chip.
+  const tagEntry = document.getElementById("tag-entry");
+  const addTagBtn = document.getElementById("add-tag-btn");
+  function commitTagEntry() {
+    addTagsFromInput(tagEntry.value);
+    tagEntry.value = "";
+    tagEntry.focus();
+  }
+  addTagBtn.addEventListener("click", commitTagEntry);
+  tagEntry.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitTagEntry();
+    }
+  });
+  // Auto-split when user types a comma so they don't have to press +.
+  tagEntry.addEventListener("input", e => {
+    if (TAG_SPLIT.test(e.target.value)) commitTagEntry();
+  });
 
   // File chooser
   document.getElementById("image-file").addEventListener("change", e => {
@@ -122,13 +183,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
 document.getElementById("meal-form").addEventListener("submit", function (e) {
   e.preventDefault();
+  // If user typed a tag but didn't press +, fold it in before saving.
+  const pending = document.getElementById("tag-entry").value;
+  if (pending && pending.trim()) addTagsFromInput(pending);
   const id = document.getElementById("meal-id").value;
   const numericId = id ? parseInt(id) : Date.now();
   const existing = getMeals().find(m => m.id === numericId);
   const meal = {
     id: numericId,
     title: document.getElementById("title").value,
-    tags: document.getElementById("tags").value.split(",").map(t => t.trim()).filter(Boolean),
+    tags: [...tagsList],
     calories: parseInt(document.getElementById("calories").value),
     description: document.getElementById("description").value,
     satisfaction: parseInt(document.getElementById("satisfaction").value),

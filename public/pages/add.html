@@ -38,7 +38,15 @@
     <form id="meal-form">
       <input type="hidden" id="meal-id" />
       <input type="text" id="title" data-i18n-placeholder="mealTitle" placeholder="Meal Title" required />
-      <input type="text" id="tags" data-i18n-placeholder="mealTags" placeholder="Tags (comma-separated)" />
+      <div class="tags-picker">
+        <label class="picker-label" data-i18n="mealTags">Tags</label>
+        <div class="tag-entry-row">
+          <input type="text" id="tag-entry" data-i18n-placeholder="addTagHint"
+            placeholder="Type a tag, then press + or Enter" />
+          <button type="button" id="add-tag-btn" class="add-tag-btn" data-i18n-title="addTag" title="Add tag">+</button>
+        </div>
+        <div class="tag-chips" id="tag-chips"></div>
+      </div>
       <input type="number" id="calories" data-i18n-placeholder="mealCalories" placeholder="Calories" />
       <textarea id="description" data-i18n-placeholder="mealDescription" placeholder="Meal Description"></textarea>
       <input type="number" id="satisfaction" data-i18n-placeholder="mealSatisfaction" placeholder="Satisfaction (1-5)"
