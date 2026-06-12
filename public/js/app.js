@@ -1,36 +1,40 @@
-// Public viewer: list meals, search by title/tag, add reviews & ratings.
-// Admin-only actions (edit/delete) are gated by auth.js + the [data-admin-only]
-// markers in the rendered card.
+// Public viewer: live list of meals (realtime), reviews, ordering, favorites.
+// Data lives in Supabase now, not localStorage, so every visitor sees the chef's
+// changes instantly. Admin-only edit/delete are gated by auth.js + RLS.
 
-async function initializeMeals() {
-  const mealsFromStorage = localStorage.getItem("meals");
-  if (!mealsFromStorage) {
-    try {
-      const response = await fetch("https://gist.githubusercontent.com/abdalabaaji/b858d603dd6215b6e93627a4f3eeb7f0/raw/21db65d8353957f910f4a4cf093ba9394dc45ca1/meals");
-      const meals = await response.json();
-      localStorage.setItem("meals", JSON.stringify(meals));
-    } catch (error) {
-      console.error("Failed to fetch meals from server:", error);
-    }
+let mealsCache = [];
+let favoriteIds = new Set();
+
+// ---------- data loading ----------
+async function loadMeals() {
+  const { data, error } = await sb
+    .from("meals")
+    .select("*, reviews(id,name,rating,comment,created_at)")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("Failed to load meals:", error);
+    return;
   }
+  mealsCache = data || [];
 }
 
-function getMeals() {
-  const meals = JSON.parse(localStorage.getItem("meals") || "[]");
-  // Normalize older meals so reviews/views always exist.
-  let mutated = false;
-  meals.forEach(m => {
-    if (typeof m.views !== "number") { m.views = 0; mutated = true; }
-    if (!Array.isArray(m.reviews)) { m.reviews = []; mutated = true; }
-  });
-  if (mutated) localStorage.setItem("meals", JSON.stringify(meals));
-  return meals;
+async function loadFavorites() {
+  favoriteIds = new Set();
+  const user = currentUser();
+  if (!user) return;
+  const { data, error } = await sb
+    .from("favorites")
+    .select("meal_id")
+    .eq("user_id", user.id);
+  if (!error) (data || []).forEach((f) => favoriteIds.add(f.meal_id));
 }
 
-function saveMeals(meals) {
-  localStorage.setItem("meals", JSON.stringify(meals));
+function currentSearch() {
+  const s = document.getElementById("search");
+  return s ? s.value : "";
 }
 
+// ---------- helpers (unchanged behavior) ----------
 function escapeHtml(s) {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;")
@@ -46,20 +50,21 @@ function avgRating(meal) {
   return sum / meal.reviews.length;
 }
 
-// Search matches title OR any tag. A leading '#' on the query forces tag-only.
 function matchesSearch(meal, raw) {
   const q = (raw || "").trim().toLowerCase();
   if (!q) return true;
   if (q.startsWith("#")) {
     const tagQ = q.slice(1);
-    return (meal.tags || []).some(t => t.toLowerCase().includes(tagQ));
+    return (meal.tags || []).some((t) => t.toLowerCase().includes(tagQ));
   }
   if (meal.title && meal.title.toLowerCase().includes(q)) return true;
-  return (meal.tags || []).some(t => t.toLowerCase().includes(q));
+  return (meal.tags || []).some((t) => t.toLowerCase().includes(q));
 }
 
 function renderStars(rating, interactive, mealId) {
-  let html = `<span class="stars-row${interactive ? " interactive" : ""}" ${interactive ? `data-meal-id="${mealId}"` : ""}>`;
+  let html = `<span class="stars-row${interactive ? " interactive" : ""}" ${
+    interactive ? `data-meal-id="${mealId}"` : ""
+  }>`;
   for (let i = 1; i <= 5; i++) {
     const filled = i <= Math.round(rating);
     html += `<span class="star ${filled ? "filled" : ""}" data-value="${i}">★</span>`;
@@ -74,42 +79,84 @@ function renderReviews(meal) {
   }
   return meal.reviews
     .slice()
-    .reverse()
-    .map(r => `
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .map(
+      (r) => `
       <div class="review">
         <div class="review-head">
           <strong>${escapeHtml(r.name)}</strong>
           <span class="stars small">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
         </div>
         <p class="review-comment">${escapeHtml(r.comment)}</p>
-        <small class="review-date">${new Date(r.date).toLocaleString()}</small>
+        <small class="review-date">${new Date(r.created_at).toLocaleString()}</small>
       </div>
-    `).join("");
+    `
+    )
+    .join("");
 }
 
+// Translate [data-i18n*] nodes within a subtree WITHOUT dispatching langchange
+// (applyLang() dispatches the event globally, which would re-enter renderMeals).
+function translateWithin(root) {
+  root.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.getAttribute("data-i18n"));
+  });
+  root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
+  });
+  root.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    el.title = t(el.getAttribute("data-i18n-title"));
+  });
+}
+
+// ---------- render ----------
+let _rendering = false;
 function renderMeals(searchText = "") {
-  const meals = getMeals();
+  // Guard against re-entrancy: applyLang() at the end dispatches "langchange",
+  // whose listener calls renderMeals again — this stops the recursion.
+  if (_rendering) return;
+  _rendering = true;
   const container = document.getElementById("meals-list");
-  if (!container) return;
+  if (!container) {
+    _rendering = false;
+    return;
+  }
   container.innerHTML = "";
 
-  meals
-    .filter(m => matchesSearch(m, searchText))
-    .forEach(meal => {
+  mealsCache
+    .filter((m) => matchesSearch(m, searchText))
+    .forEach((meal) => {
       const card = document.createElement("div");
       card.className = "card";
       card.setAttribute("data-meal-id", meal.id);
       const avg = avgRating(meal);
+      const isFav = favoriteIds.has(meal.id);
       card.innerHTML = `
-        <img src="${escapeHtml(meal.image) || 'https://via.placeholder.com/150'}" alt="${escapeHtml(meal.title)}" class="meal-img"/>
+        <div class="meal-img-wrap">
+          <img src="${escapeHtml(meal.image) || "https://via.placeholder.com/150"}" alt="${escapeHtml(
+        meal.title
+      )}" class="meal-img"/>
+          <button class="fav-btn${isFav ? " faved" : ""}" data-auth-in title="${t(
+        "favorite"
+      )}">${isFav ? "♥" : "♡"}</button>
+        </div>
         <div class="card-content">
           <h3>${escapeHtml(meal.title)}</h3>
-          <p><strong data-i18n="date">Date</strong>: ${new Date(meal.date).toLocaleString()}</p>
+          <p><strong data-i18n="date">Date</strong>: ${new Date(meal.created_at).toLocaleString()}</p>
           <p><strong data-i18n="tags">Tags</strong>:
-            ${(meal.tags || []).map(tag => `<span class="tag clickable-tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</span>`).join(" ")}
+            ${(meal.tags || [])
+              .map(
+                (tag) =>
+                  `<span class="tag clickable-tag" data-tag="${escapeHtml(tag)}">#${escapeHtml(
+                    tag
+                  )}</span>`
+              )
+              .join(" ")}
           </p>
           <p><strong data-i18n="calories">Calories</strong>: ${meal.calories} <span data-i18n="kcal">kcal</span></p>
-          <p><strong data-i18n="satisfaction">Satisfaction</strong>: <span class="stars">${'⭐'.repeat(meal.satisfaction || 0)}</span></p>
+          <p><strong data-i18n="satisfaction">Satisfaction</strong>: <span class="stars">${"⭐".repeat(
+            meal.satisfaction || 0
+          )}</span></p>
           <p class="meta-row">
             <span>👁️ <span data-i18n="views">Views</span>: <strong>${meal.views || 0}</strong></span>
             <span>⭐ <span data-i18n="avgRating">Avg. Rating</span>:
@@ -117,6 +164,9 @@ function renderMeals(searchText = "") {
               (${meal.reviews ? meal.reviews.length : 0})
             </span>
           </p>
+
+          <button class="order-btn" data-i18n="orderNow">Order now</button>
+
           <button class="toggle-desc-btn" data-i18n="showDescription">Show Description</button>
           <p class="description hidden">${escapeHtml(meal.description)}</p>
 
@@ -149,27 +199,27 @@ function renderMeals(searchText = "") {
 
   attachCardHandlers();
   applyAdminUi();
-  applyLang(); // re-apply translations to newly inserted nodes
+  applyAuthUi();
+  applyLang(); // dispatches langchange → guarded re-entry above is a no-op
+  _rendering = false;
 }
 
-// View counter increments once per meal per page load, not per re-render.
+// View counter increments once per meal per page load.
 const viewedMeals = new Set();
 
 function attachCardHandlers() {
-  document.querySelectorAll(".card").forEach(card => {
+  document.querySelectorAll(".card").forEach((card) => {
     const id = parseInt(card.getAttribute("data-meal-id"));
     if (viewedMeals.has(id)) return;
     viewedMeals.add(id);
     incrementView(id);
   });
 
-  // Show/hide description
-  document.querySelectorAll(".toggle-desc-btn").forEach(btn => {
+  document.querySelectorAll(".toggle-desc-btn").forEach((btn) => {
     btn.addEventListener("click", () => toggleDescription(btn));
   });
 
-  // Show/hide reviews section
-  document.querySelectorAll(".toggle-reviews-btn").forEach(btn => {
+  document.querySelectorAll(".toggle-reviews-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const body = btn.closest(".reviews-section").querySelector(".reviews-body");
       const hidden = body.classList.toggle("hidden");
@@ -179,8 +229,7 @@ function attachCardHandlers() {
     });
   });
 
-  // Click a tag chip to filter by it
-  document.querySelectorAll(".clickable-tag").forEach(chip => {
+  document.querySelectorAll(".clickable-tag").forEach((chip) => {
     chip.addEventListener("click", () => {
       const tag = chip.getAttribute("data-tag");
       const search = document.getElementById("search");
@@ -191,14 +240,31 @@ function attachCardHandlers() {
     });
   });
 
+  // Order buttons
+  document.querySelectorAll(".card .order-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = parseInt(btn.closest(".card").getAttribute("data-meal-id"));
+      const meal = mealsCache.find((m) => m.id === id);
+      if (meal) openOrderModal(meal);
+    });
+  });
+
+  // Favorite hearts
+  document.querySelectorAll(".card .fav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = parseInt(btn.closest(".card").getAttribute("data-meal-id"));
+      toggleFavorite(id, btn);
+    });
+  });
+
   // Star rating in review form
-  document.querySelectorAll(".stars-row.interactive").forEach(row => {
-    row.querySelectorAll(".star").forEach(star => {
+  document.querySelectorAll(".stars-row.interactive").forEach((row) => {
+    row.querySelectorAll(".star").forEach((star) => {
       star.addEventListener("click", () => {
         const val = parseInt(star.getAttribute("data-value"));
         const form = row.closest(".review-form");
         form.querySelector('input[name="rating"]').value = val;
-        row.querySelectorAll(".star").forEach(s => {
+        row.querySelectorAll(".star").forEach((s) => {
           s.classList.toggle("filled", parseInt(s.getAttribute("data-value")) <= val);
         });
       });
@@ -206,30 +272,39 @@ function attachCardHandlers() {
   });
 
   // Submit review
-  document.querySelectorAll(".review-form").forEach(form => {
-    form.addEventListener("submit", e => {
+  document.querySelectorAll(".review-form").forEach((form) => {
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
       const id = parseInt(form.getAttribute("data-meal-id"));
       const rating = parseInt(form.querySelector('input[name="rating"]').value);
       const name = form.querySelector('input[name="name"]').value.trim();
       const comment = form.querySelector('textarea[name="comment"]').value.trim();
-      if (!rating) { alert(t("pleaseRate")); return; }
-      if (!name) { alert(t("pleaseName")); return; }
-      if (!comment) { alert(t("pleaseComment")); return; }
-      addReview(id, { rating, name, comment, date: new Date().toISOString() });
+      if (!rating) {
+        alert(t("pleaseRate"));
+        return;
+      }
+      if (!name) {
+        alert(t("pleaseName"));
+        return;
+      }
+      if (!comment) {
+        alert(t("pleaseComment"));
+        return;
+      }
+      addReview(id, { rating, name, comment });
     });
   });
 
-  // Admin-only edit/delete buttons
-  document.querySelectorAll(".card .edit-btn").forEach(btn => {
+  // Admin edit/delete
+  document.querySelectorAll(".card .edit-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!isAdmin()) return;
       const id = parseInt(btn.closest(".card").getAttribute("data-meal-id"));
-      const meal = getMeals().find(m => m.id === id);
+      const meal = mealsCache.find((m) => m.id === id);
       if (meal) editMeal(meal);
     });
   });
-  document.querySelectorAll(".card .delete-btn").forEach(btn => {
+  document.querySelectorAll(".card .delete-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!isAdmin()) return;
       const id = parseInt(btn.closest(".card").getAttribute("data-meal-id"));
@@ -238,35 +313,167 @@ function attachCardHandlers() {
   });
 }
 
-function incrementView(id) {
-  const meals = getMeals();
-  const meal = meals.find(m => m.id === id);
-  if (!meal) return;
-  meal.views = (meal.views || 0) + 1;
-  saveMeals(meals);
-  // Update only the views badge in place to avoid a full re-render loop.
+async function incrementView(id) {
+  await sb.rpc("increment_meal_views", { p_meal_id: id });
+  // Optimistically bump the local badge; realtime will reconcile.
+  const meal = mealsCache.find((m) => m.id === id);
+  if (meal) meal.views = (meal.views || 0) + 1;
   const card = document.querySelector(`.card[data-meal-id="${id}"]`);
   if (card) {
     const strong = card.querySelector(".meta-row strong");
-    if (strong) strong.textContent = meal.views;
+    if (strong && meal) strong.textContent = meal.views;
   }
 }
 
-function addReview(id, review) {
-  const meals = getMeals();
-  const meal = meals.find(m => m.id === id);
-  if (!meal) return;
-  if (!Array.isArray(meal.reviews)) meal.reviews = [];
-  meal.reviews.push(review);
-  saveMeals(meals);
-  renderMeals(document.getElementById("search").value || "");
+async function addReview(id, review) {
+  const { error } = await sb.from("reviews").insert({
+    meal_id: id,
+    name: review.name,
+    rating: review.rating,
+    comment: review.comment,
+  });
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await loadMeals();
+  renderMeals(currentSearch());
 }
 
-function deleteMeal(id) {
+async function deleteMeal(id) {
   if (!confirm(t("confirmDelete"))) return;
-  const meals = getMeals().filter(meal => meal.id !== id);
-  saveMeals(meals);
-  renderMeals(document.getElementById("search").value || "");
+  const { error } = await sb.from("meals").delete().eq("id", id);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await loadMeals();
+  renderMeals(currentSearch());
+}
+
+// ---------- favorites ----------
+async function toggleFavorite(mealId, btn) {
+  const user = currentUser();
+  if (!user) {
+    alert(t("loginToFavorite"));
+    return;
+  }
+  if (favoriteIds.has(mealId)) {
+    const { error } = await sb
+      .from("favorites")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("meal_id", mealId);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    favoriteIds.delete(mealId);
+  } else {
+    const { error } = await sb
+      .from("favorites")
+      .insert({ user_id: user.id, meal_id: mealId });
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    favoriteIds.add(mealId);
+  }
+  const faved = favoriteIds.has(mealId);
+  btn.classList.toggle("faved", faved);
+  btn.textContent = faved ? "♥" : "♡";
+}
+
+// ---------- ordering ----------
+let _orderMeal = null;
+
+function ensureOrderModal() {
+  if (document.getElementById("order-modal")) return;
+  const modal = document.createElement("div");
+  modal.id = "order-modal";
+  modal.className = "modal-overlay hidden";
+  modal.innerHTML = `
+    <div class="modal-box">
+      <h3 id="order-modal-title" data-i18n="orderTitle">Place an order</h3>
+      <p class="order-meal-name" id="order-meal-name"></p>
+      <form id="order-form">
+        <input type="text" id="order-name" data-i18n-placeholder="yourName" placeholder="Your name" required />
+        <textarea id="order-note" data-i18n-placeholder="orderNotePlaceholder" placeholder="Optional note or address..."></textarea>
+        <div class="modal-actions">
+          <button type="button" id="order-cancel" class="btn-secondary" data-i18n="cancel">Cancel</button>
+          <button type="submit" data-i18n="sendOrder">Send order</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeOrderModal();
+  });
+  modal.querySelector("#order-cancel").addEventListener("click", closeOrderModal);
+  modal.querySelector("#order-form").addEventListener("submit", submitOrder);
+}
+
+function openOrderModal(meal) {
+  ensureOrderModal();
+  _orderMeal = meal;
+  const modal = document.getElementById("order-modal");
+  modal.querySelector("#order-meal-name").textContent = meal.title;
+  const nameInput = modal.querySelector("#order-name");
+  const user = currentUser();
+  nameInput.value =
+    (user && (user.user_metadata?.name || user.email?.split("@")[0])) || "";
+  modal.querySelector("#order-note").value = "";
+  modal.classList.remove("hidden");
+  translateWithin(modal);
+  nameInput.focus();
+}
+
+function closeOrderModal() {
+  const modal = document.getElementById("order-modal");
+  if (modal) modal.classList.add("hidden");
+  _orderMeal = null;
+}
+
+async function submitOrder(e) {
+  e.preventDefault();
+  if (!_orderMeal) return;
+  const meal = _orderMeal;
+  const name = document.getElementById("order-name").value.trim();
+  const note = document.getElementById("order-note").value.trim();
+  if (!name) {
+    alert(t("pleaseName"));
+    return;
+  }
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
+
+  const { error } = await sb.from("orders").insert({
+    meal_id: meal.id,
+    meal_title: meal.title,
+    customer_name: name,
+    note: note || null,
+  });
+
+  if (error) {
+    if (submitBtn) submitBtn.disabled = false;
+    alert(error.message);
+    return;
+  }
+
+  // Best-effort email to the chef; the order is already saved either way.
+  try {
+    await sb.functions.invoke("order-email", {
+      body: { meal_title: meal.title, customer_name: name, note },
+    });
+  } catch (err) {
+    console.warn("order email failed (order still recorded):", err);
+  }
+
+  if (submitBtn) submitBtn.disabled = false;
+  closeOrderModal();
+  alert(t("orderSent"));
 }
 
 function toggleDescription(button) {
@@ -287,9 +494,29 @@ function editMeal(meal) {
   window.location.href = "pages/add.html";
 }
 
+// ---------- realtime ----------
+let _reloadTimer = null;
+function scheduleReload() {
+  clearTimeout(_reloadTimer);
+  _reloadTimer = setTimeout(async () => {
+    await loadMeals();
+    renderMeals(currentSearch());
+  }, 350);
+}
+
+function subscribeRealtime() {
+  sb.channel("public-meals-reviews")
+    .on("postgres_changes", { event: "*", schema: "public", table: "meals" }, scheduleReload)
+    .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, scheduleReload)
+    .subscribe();
+}
+
+// ---------- boot ----------
 document.addEventListener("DOMContentLoaded", async () => {
-  await initializeMeals();
+  await authReady;
+  await Promise.all([loadMeals(), loadFavorites()]);
   renderMeals();
+  subscribeRealtime();
 
   const search = document.getElementById("search");
   if (search) {
@@ -298,16 +525,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const logout = document.getElementById("logout-link");
   if (logout) {
-    logout.addEventListener("click", e => {
+    logout.addEventListener("click", (e) => {
       e.preventDefault();
-      logoutAdmin();
-      applyAdminUi();
-      renderMeals(search ? search.value : "");
+      signOutUser();
     });
   }
 });
 
+// Re-render when the user logs in/out (favorites + admin buttons change).
+document.addEventListener("authchange", async () => {
+  await loadFavorites();
+  renderMeals(currentSearch());
+});
+
 document.addEventListener("langchange", () => {
-  const search = document.getElementById("search");
-  renderMeals(search ? search.value : "");
+  renderMeals(currentSearch());
 });

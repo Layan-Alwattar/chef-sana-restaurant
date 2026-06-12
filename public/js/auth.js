@@ -1,58 +1,90 @@
-// Simple client-side admin gate for NutriSnap.
-// NOTE: This is *not* real security — it only hides the admin UI from casual
-// visitors. The key lives in the client and any determined user can bypass it.
-// For a real app, move auth to a backend.
+// Authentication & admin state for Chef Sana's Restaurant.
+//
+// Accounts are real now (Supabase Auth). "Admin" = an account whose email is in
+// the `admins` table — enforced server-side by RLS, not just hidden in the UI.
+//
+// UI visibility hooks (kept compatible with the old markup):
+//   [data-admin-only] — shown only to admins (Chef Sana)
+//   [data-auth-in]    — shown only when someone is logged in
+//   [data-auth-out]   — shown only when logged out
 
-const ADMIN_KEY = "Sana@2012";       // shared secret
-const ADMIN_FLAG = "nutri_isAdmin";          // localStorage flag
-const ADMIN_PATH_TOKEN = "admin";            // ?key=... unlock token in URL
+let _user = null;
+let _isAdmin = false;
+
+let _resolveAuthReady;
+const authReady = new Promise((r) => (_resolveAuthReady = r));
 
 function isAdmin() {
-  return localStorage.getItem(ADMIN_FLAG) === "true";
+  return _isAdmin;
+}
+function currentUser() {
+  return _user;
 }
 
-function loginAdmin(key) {
-  if (key === ADMIN_KEY) {
-    localStorage.setItem(ADMIN_FLAG, "true");
-    return true;
+async function refreshAdminFlag() {
+  if (!_user) {
+    _isAdmin = false;
+    return;
   }
-  return false;
-}
-
-function logoutAdmin() {
-  localStorage.removeItem(ADMIN_FLAG);
-}
-
-// Allow unlock via URL: pages/admin.html?key=nutri-admin-2025
-(function autoUnlockFromUrl() {
   try {
-    const params = new URLSearchParams(window.location.search);
-    const key = params.get("key");
-    if (key && loginAdmin(key)) {
-      // Clean the key out of the URL bar so it isn't bookmarked/shared.
-      const url = new URL(window.location.href);
-      url.searchParams.delete("key");
-      window.history.replaceState({}, document.title, url.toString());
-    }
-  } catch (e) { /* ignore */ }
-})();
+    const { data, error } = await sb.rpc("is_admin");
+    _isAdmin = !error && data === true;
+  } catch (_e) {
+    _isAdmin = false;
+  }
+}
 
-// Toggle visibility of admin-only nav links etc.
 function applyAdminUi() {
-  const admin = isAdmin();
-  document.querySelectorAll("[data-admin-only]").forEach(el => {
+  const admin = _isAdmin;
+  document.querySelectorAll("[data-admin-only]").forEach((el) => {
     el.style.display = admin ? "" : "none";
   });
-  document.querySelectorAll("[data-public-only]").forEach(el => {
-    el.style.display = admin ? "none" : "";
+}
+
+function applyAuthUi() {
+  const loggedIn = !!_user;
+  document.querySelectorAll("[data-auth-in]").forEach((el) => {
+    el.style.display = loggedIn ? "" : "none";
+  });
+  document.querySelectorAll("[data-auth-out]").forEach((el) => {
+    el.style.display = loggedIn ? "none" : "";
   });
 }
 
-document.addEventListener("DOMContentLoaded", applyAdminUi);
-
-// Guard admin pages: redirect to login if not authed.
-function requireAdminOrRedirect(loginPath) {
-  if (!isAdmin()) {
-    window.location.href = loginPath;
-  }
+async function applySession(session) {
+  _user = (session && session.user) || null;
+  await refreshAdminFlag();
+  applyAdminUi();
+  applyAuthUi();
+  document.dispatchEvent(
+    new CustomEvent("authchange", { detail: { user: _user, isAdmin: _isAdmin } })
+  );
 }
+
+async function signOutUser() {
+  await sb.auth.signOut();
+  // onAuthStateChange will fire applySession(null).
+}
+
+// Guard admin-only pages. Waits for the session to load first so we don't
+// bounce an admin out before their session is known.
+async function requireAdminOrRedirect(loginPath) {
+  await authReady;
+  if (!isAdmin()) window.location.replace(loginPath);
+}
+
+(async function initAuth() {
+  const {
+    data: { session },
+  } = await sb.auth.getSession();
+  await applySession(session);
+  _resolveAuthReady();
+  sb.auth.onAuthStateChange((_event, session) => {
+    applySession(session);
+  });
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+  applyAdminUi();
+  applyAuthUi();
+});

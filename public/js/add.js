@@ -1,29 +1,32 @@
-function getMeals() {
-  return JSON.parse(localStorage.getItem("meals") || "[]");
-}
-function saveMeals(meals) {
-  localStorage.setItem("meals", JSON.stringify(meals));
-}
+// Admin add/edit meal form. Writes meals to Supabase and uploads photos to
+// Supabase Storage (bucket: meal-images). Admin-only: non-admins are bounced.
 
-// Tag chip state. Splits on both English ',' and Arabic '،' so pasted lists
-// like "vegan, healthy ، خضار" all become individual chips.
+// Tag chip state. Splits on both English ',' and Arabic '،'.
 let tagsList = [];
 const TAG_SPLIT = /[,،]+/;
 
 function escHtml(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function renderTagChips() {
   const wrap = document.getElementById("tag-chips");
   if (!wrap) return;
-  wrap.innerHTML = tagsList.map((tag, i) => `
+  wrap.innerHTML = tagsList
+    .map(
+      (tag, i) => `
     <span class="tag-chip">
       <span class="tag-chip-text">#${escHtml(tag)}</span>
       <button type="button" class="tag-chip-remove" data-index="${i}" data-i18n-title="removeTag" title="Remove tag" aria-label="Remove">×</button>
     </span>
-  `).join("");
-  wrap.querySelectorAll(".tag-chip-remove").forEach(btn => {
+  `
+    )
+    .join("");
+  wrap.querySelectorAll(".tag-chip-remove").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.getAttribute("data-index"));
       tagsList.splice(idx, 1);
@@ -34,9 +37,9 @@ function renderTagChips() {
 
 function addTagsFromInput(rawText) {
   if (!rawText) return;
-  const parts = rawText.split(TAG_SPLIT).map(s => s.trim()).filter(Boolean);
+  const parts = rawText.split(TAG_SPLIT).map((s) => s.trim()).filter(Boolean);
   let added = false;
-  parts.forEach(p => {
+  parts.forEach((p) => {
     if (!tagsList.includes(p)) {
       tagsList.push(p);
       added = true;
@@ -45,14 +48,13 @@ function addTagsFromInput(rawText) {
   if (added) renderTagChips();
 }
 
-const MAX_IMAGE_WIDTH = 1000;   // downscale uploads/pastes so localStorage stays small
+const MAX_IMAGE_WIDTH = 1000; // downscale uploads/pastes before storing
 const JPEG_QUALITY = 0.85;
 
-// Read a File/Blob, downscale to MAX_IMAGE_WIDTH if larger, return a JPEG data URL.
 function fileToResizedDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
         const ratio = Math.min(1, MAX_IMAGE_WIDTH / img.width);
@@ -102,8 +104,40 @@ async function handleFile(file) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  const editing = JSON.parse(localStorage.getItem("editingMeal"));
+// Convert a data: URL into a Blob for upload.
+function dataUrlToBlob(dataUrl) {
+  const [head, b64] = dataUrl.split(",");
+  const mime = (head.match(/:(.*?);/) || [, "image/jpeg"])[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+async function uploadImageIfNeeded(value) {
+  // Only freshly added images are data: URLs — upload those to Storage and
+  // return the public URL. Plain http(s) URLs (or empty) are kept as-is.
+  if (!value || !value.startsWith("data:")) return value;
+  const blob = dataUrlToBlob(value);
+  const ext = blob.type === "image/png" ? "png" : "jpg";
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage
+    .from("meal-images")
+    .upload(path, blob, { contentType: blob.type, upsert: false });
+  if (error) throw error;
+  const { data } = sb.storage.from("meal-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+document.addEventListener("DOMContentLoaded", async function () {
+  // Guard: only admins (Chef Sana) may use this page.
+  await authReady;
+  if (!isAdmin()) {
+    window.location.replace("account.html");
+    return;
+  }
+
+  const editing = JSON.parse(localStorage.getItem("editingMeal") || "null");
   if (editing) {
     document.getElementById("page-title").setAttribute("data-i18n", "pageTitleEdit");
     document.getElementById("page-title").textContent = t("pageTitleEdit");
@@ -116,7 +150,6 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("satisfaction").value = editing.satisfaction;
     if (editing.image) {
       setImageValue(editing.image);
-      // If it's a normal URL (not a data URL), echo it into the URL field so it stays editable.
       if (!editing.image.startsWith("data:")) {
         document.getElementById("image-url").value = editing.image;
       }
@@ -124,7 +157,6 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.removeItem("editingMeal");
   }
 
-  // Tag entry: + button and Enter both add the current input as a chip.
   const tagEntry = document.getElementById("tag-entry");
   const addTagBtn = document.getElementById("add-tag-btn");
   function commitTagEntry() {
@@ -133,39 +165,34 @@ document.addEventListener("DOMContentLoaded", function () {
     tagEntry.focus();
   }
   addTagBtn.addEventListener("click", commitTagEntry);
-  tagEntry.addEventListener("keydown", e => {
+  tagEntry.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       commitTagEntry();
     }
   });
-  // Auto-split when user types a comma so they don't have to press +.
-  tagEntry.addEventListener("input", e => {
+  tagEntry.addEventListener("input", (e) => {
     if (TAG_SPLIT.test(e.target.value)) commitTagEntry();
   });
 
-  // File chooser
-  document.getElementById("image-file").addEventListener("change", e => {
+  document.getElementById("image-file").addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) handleFile(file);
   });
 
-  // Manual URL entry
-  document.getElementById("image-url").addEventListener("input", e => {
+  document.getElementById("image-url").addEventListener("input", (e) => {
     const url = e.target.value.trim();
     if (url) setImageValue(url);
     else if (!document.getElementById("image-file").files[0]) setImageValue("");
   });
 
-  // Remove button
   document.getElementById("image-remove").addEventListener("click", () => {
     setImageValue("");
     document.getElementById("image-file").value = "";
     document.getElementById("image-url").value = "";
   });
 
-  // Paste an image from the clipboard anywhere on the page (Ctrl/⌘ + V).
-  document.addEventListener("paste", async e => {
+  document.addEventListener("paste", async (e) => {
     const items = e.clipboardData && e.clipboardData.items;
     if (!items) return;
     for (const item of items) {
@@ -179,41 +206,55 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   });
+
+  document.getElementById("meal-form").addEventListener("submit", onSubmit);
 });
 
-document.getElementById("meal-form").addEventListener("submit", function (e) {
+async function onSubmit(e) {
   e.preventDefault();
-  // If user typed a tag but didn't press +, fold it in before saving.
   const pending = document.getElementById("tag-entry").value;
   if (pending && pending.trim()) addTagsFromInput(pending);
-  const id = document.getElementById("meal-id").value;
-  const numericId = id ? parseInt(id) : Date.now();
-  const existing = getMeals().find(m => m.id === numericId);
-  const meal = {
-    id: numericId,
-    title: document.getElementById("title").value,
-    tags: [...tagsList],
-    calories: parseInt(document.getElementById("calories").value),
-    description: document.getElementById("description").value,
-    satisfaction: parseInt(document.getElementById("satisfaction").value),
-    image: document.getElementById("image").value,
-    date: existing ? existing.date : new Date().toISOString(),
-    userId: existing ? existing.userId : 1,
-    views: existing ? (existing.views || 0) : 0,
-    reviews: existing ? (existing.reviews || []) : []
-  };
-  const meals = getMeals();
-  const updated = meals.some(m => m.id === meal.id)
-    ? meals.map(m => m.id === meal.id ? meal : m)
-    : [...meals, meal];
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
+
+  const idVal = document.getElementById("meal-id").value;
+  const caloriesVal = document.getElementById("calories").value;
+  const satisfactionVal = document.getElementById("satisfaction").value;
+
+  let imageUrl;
   try {
-    saveMeals(updated);
+    imageUrl = await uploadImageIfNeeded(document.getElementById("image").value);
   } catch (err) {
-    // QuotaExceededError typically means localStorage filled with too many big images.
-    alert("Storage is full — try removing old meals or using a smaller image.");
-    console.error(err);
+    console.error("Image upload failed:", err);
+    alert(t("imageUploadFailed"));
+    if (submitBtn) submitBtn.disabled = false;
     return;
   }
+
+  const row = {
+    title: document.getElementById("title").value.trim(),
+    tags: [...tagsList],
+    calories: caloriesVal ? parseInt(caloriesVal) : null,
+    description: document.getElementById("description").value,
+    satisfaction: satisfactionVal ? parseInt(satisfactionVal) : null,
+    image: imageUrl || null,
+  };
+
+  let error;
+  if (idVal) {
+    ({ error } = await sb.from("meals").update(row).eq("id", parseInt(idVal)));
+  } else {
+    ({ error } = await sb.from("meals").insert(row));
+  }
+
+  if (error) {
+    console.error(error);
+    alert(error.message);
+    if (submitBtn) submitBtn.disabled = false;
+    return;
+  }
+
   alert(t("mealSaved"));
   window.location.href = "../index.html";
-});
+}
