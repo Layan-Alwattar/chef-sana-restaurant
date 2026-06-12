@@ -89,6 +89,7 @@ const I18N = {
     loggedInAs: "Logged in as",
     myFavorites: "My Favorites",
     noFavoritesYet: "No favorites yet. Tap the heart on a meal to save it here.",
+    newOrderTitle: "🛎️ New order!",
     footer: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا",
     footerShort: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا"
   },
@@ -181,6 +182,7 @@ const I18N = {
     loggedInAs: "مسجّل الدخول باسم",
     myFavorites: "المفضلة",
     noFavoritesYet: "لا توجد مفضلة بعد. اضغط على القلب في أي وجبة لحفظها هنا.",
+    newOrderTitle: "🛎️ طلب جديد!",
     footer: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا",
     footerShort: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا"
   }
