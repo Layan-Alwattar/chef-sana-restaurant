@@ -54,7 +54,7 @@ function _esc(s) {
     .replace(/>/g, "&gt;");
 }
 
-function _showToast(title, body) {
+function _showToast(title, body, onClick) {
   let wrap = document.getElementById("toast-wrap");
   if (!wrap) {
     wrap = document.createElement("div");
@@ -64,15 +64,29 @@ function _showToast(title, body) {
   const toast = document.createElement("div");
   toast.className = "order-toast";
   toast.innerHTML = `<span class="toast-bell">🛎️</span>
-    <div class="toast-text"><strong>${_esc(title)}</strong><div>${_esc(body)}</div></div>`;
+    <div class="toast-text"><strong>${_esc(title)}</strong><div>${_esc(body)}</div>
+      <div class="toast-hint">${_esc(t("viewMeal"))}</div></div>`;
   wrap.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add("show"));
   const remove = () => {
     toast.classList.remove("show");
     setTimeout(() => toast.remove(), 300);
   };
-  toast.addEventListener("click", remove);
+  toast.addEventListener("click", () => {
+    if (typeof onClick === "function") onClick();
+    remove();
+  });
   setTimeout(remove, 9000);
+}
+
+// Open/reveal the ordered meal's card. If we're not on the home page (where the
+// cards live), navigate there with ?meal=ID so it reveals on load.
+function openOrderedMeal(mealId) {
+  if (mealId == null) return;
+  if (typeof window.revealMeal === "function" && window.revealMeal(mealId)) return;
+  const inPages = location.pathname.includes("/pages/");
+  window.location.href =
+    (inPages ? "../index.html" : "index.html") + "?meal=" + encodeURIComponent(mealId);
 }
 
 function _faviconHref() {
@@ -84,11 +98,17 @@ function notifyOrder(order) {
   const title = t("newOrderTitle");
   let body = `${order.customer_name} — ${order.meal_title}`;
   if (order.note) body += ` (${order.note})`;
+  const open = () => openOrderedMeal(order.meal_id);
   _playChime();
-  _showToast(title, body);
+  _showToast(title, body, open);
   if ("Notification" in window && Notification.permission === "granted") {
     try {
-      new Notification(title, { body, icon: _faviconHref() });
+      const n = new Notification(title, { body, icon: _faviconHref() });
+      n.onclick = () => {
+        window.focus();
+        open();
+        n.close();
+      };
     } catch (_e) {
       /* ignore */
     }

@@ -494,6 +494,26 @@ function editMeal(meal) {
   window.location.href = "pages/add.html";
 }
 
+// Scroll to a meal's card and flash it. Used when the admin clicks an order
+// notification. Clears any active search so the card is guaranteed to render.
+function revealMeal(mealId) {
+  if (mealId == null) return false;
+  const search = document.getElementById("search");
+  if (search && search.value) {
+    search.value = "";
+    renderMeals("");
+  }
+  const card = document.querySelector(`.card[data-meal-id="${mealId}"]`);
+  if (!card) return false;
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.remove("highlight");
+  void card.offsetWidth; // restart the animation if already applied
+  card.classList.add("highlight");
+  setTimeout(() => card.classList.remove("highlight"), 3200);
+  return true;
+}
+window.revealMeal = revealMeal;
+
 // ---------- realtime ----------
 let _reloadTimer = null;
 function scheduleReload() {
@@ -517,6 +537,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   await Promise.all([loadMeals(), loadFavorites()]);
   renderMeals();
   subscribeRealtime();
+
+  // If we arrived from an order notification on another page (index.html?meal=ID),
+  // reveal that meal once the grid is rendered.
+  const mealParam = new URLSearchParams(location.search).get("meal");
+  if (mealParam) {
+    revealMeal(parseInt(mealParam));
+    history.replaceState({}, document.title, location.pathname);
+  }
 
   const search = document.getElementById("search");
   if (search) {

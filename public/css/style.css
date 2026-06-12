@@ -796,3 +796,19 @@ html[dir="rtl"] .order-toast {
   font-size: 0.95rem;
   opacity: 0.95;
 }
+.order-toast .toast-hint {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  opacity: 0.85;
+}
+
+/* Flash a meal card when opened from an order notification */
+.card.highlight {
+  animation: card-highlight 3.2s ease;
+}
+@keyframes card-highlight {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 0, 0, 0.05); }
+  15% { box-shadow: 0 0 0 4px #2e7d32, 0 12px 28px rgba(46, 125, 50, 0.45); }
+  70% { box-shadow: 0 0 0 4px #2e7d32, 0 12px 28px rgba(46, 125, 50, 0.45); }
+}
