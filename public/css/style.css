@@ -893,6 +893,223 @@ html[dir="rtl"] .order-card h3 {
   background: #1b5e20;
 }
 
+/* ---------- Coins on meal cards ---------- */
+.coins-line {
+  font-weight: bold;
+  color: #c79100;
+}
+.coins-line strong {
+  color: #b8860b;
+  font-size: 1.1rem;
+}
+
+/* ---------- Order option checkboxes (in order modal) ---------- */
+.order-coins {
+  margin: 0 0 0.75rem;
+  font-weight: bold;
+  color: #b8860b;
+  font-size: 1.05rem;
+}
+.order-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.order-options-label {
+  font-weight: bold;
+  color: #333;
+}
+.opt-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f0f4e4;
+  border: 1px solid #e2e9d2;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.opt-check input {
+  width: auto;
+  margin: 0;
+  transform: scale(1.2);
+}
+
+/* ---------- Orders dashboard extra lines ---------- */
+.order-opts-line {
+  margin: 0.2rem 0;
+  color: #3f6b1e;
+  font-weight: bold;
+}
+.order-coins-line {
+  margin: 0.2rem 0;
+  color: #b8860b;
+  font-weight: bold;
+}
+
+/* ===========================================================
+   Coins Wallet (friendly / game-style)
+   =========================================================== */
+.wallet-h2 {
+  font-family: 'Playfair Display', serif;
+  margin: 1.75rem 0 0.75rem;
+}
+html[dir="rtl"] .wallet-h2 {
+  font-family: 'Amiri', serif;
+}
+
+.wallet-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+.wallet-card {
+  border-radius: 18px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+.wallet-card-month {
+  background: linear-gradient(135deg, #fbc02d, #f9a825);
+}
+.wallet-card-total {
+  background: linear-gradient(135deg, #66bb6a, #2e7d32);
+}
+.wc-emoji {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+.wc-num {
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0.2rem 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.wc-label {
+  font-size: 1.1rem;
+  opacity: 0.95;
+}
+
+/* Monthly bars */
+.wallet-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  height: 200px;
+  padding: 1rem;
+  background: #f6faef;
+  border-radius: 16px;
+}
+.bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.bar-value {
+  font-weight: bold;
+  color: #2e7d32;
+  margin-bottom: 0.25rem;
+}
+.bar {
+  width: 70%;
+  max-width: 48px;
+  background: linear-gradient(180deg, #9ccc65, #558b2f);
+  border-radius: 8px 8px 0 0;
+  transition: height 0.4s ease;
+}
+.bar-label {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Leaderboard */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.lb-top {
+  background: linear-gradient(135deg, #fffde7, #fff9c4);
+  border-color: #ffe082;
+}
+.lb-rank {
+  font-size: 1.4rem;
+  width: 2rem;
+  text-align: center;
+}
+.lb-name {
+  flex: 1;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+.lb-orders {
+  color: #777;
+  font-size: 0.9rem;
+}
+.lb-coins {
+  font-weight: bold;
+  color: #b8860b;
+  font-size: 1.1rem;
+}
+
+/* Personal + guest views */
+.wallet-user,
+.wallet-guest {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.wallet-big-emoji {
+  font-size: 4rem;
+  line-height: 1;
+  animation: coin-bounce 1.6s ease-in-out infinite;
+}
+@keyframes coin-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.wallet-user-coins {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #b8860b;
+}
+.wallet-user-label {
+  font-size: 1.3rem;
+  color: #555;
+}
+.wallet-user-orders {
+  margin-top: 0.75rem;
+  font-size: 1.1rem;
+  color: #2e7d32;
+  font-weight: bold;
+}
+.wallet-login-link {
+  display: inline-block;
+  margin-top: 1rem;
+  text-decoration: none;
+}
+.wallet-empty {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #777;
+  padding: 2rem;
+}
+
 /* ---------- Order confirmation bird ---------- */
 .order-bird {
   position: absolute;

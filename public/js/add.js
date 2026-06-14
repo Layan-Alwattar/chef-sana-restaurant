@@ -48,6 +48,43 @@ function addTagsFromInput(rawText) {
   if (added) renderTagChips();
 }
 
+// ---- Meal options (e.g. "with sugar", "no cheese") — same chip UX as tags ----
+let optionsList = [];
+
+function renderOptionChips() {
+  const wrap = document.getElementById("option-chips");
+  if (!wrap) return;
+  wrap.innerHTML = optionsList
+    .map(
+      (opt, i) => `
+    <span class="tag-chip">
+      <span class="tag-chip-text">${escHtml(opt)}</span>
+      <button type="button" class="tag-chip-remove" data-index="${i}" data-i18n-title="removeOption" title="Remove option" aria-label="Remove">×</button>
+    </span>
+  `
+    )
+    .join("");
+  wrap.querySelectorAll(".tag-chip-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      optionsList.splice(parseInt(btn.getAttribute("data-index")), 1);
+      renderOptionChips();
+    });
+  });
+}
+
+function addOptionsFromInput(rawText) {
+  if (!rawText) return;
+  const parts = rawText.split(TAG_SPLIT).map((s) => s.trim()).filter(Boolean);
+  let added = false;
+  parts.forEach((p) => {
+    if (!optionsList.includes(p)) {
+      optionsList.push(p);
+      added = true;
+    }
+  });
+  if (added) renderOptionChips();
+}
+
 const MAX_IMAGE_WIDTH = 1000; // downscale uploads/pastes before storing
 const JPEG_QUALITY = 0.85;
 
@@ -145,6 +182,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.getElementById("title").value = editing.title;
     tagsList = Array.isArray(editing.tags) ? [...editing.tags] : [];
     renderTagChips();
+    optionsList = Array.isArray(editing.options) ? [...editing.options] : [];
+    renderOptionChips();
+    document.getElementById("points").value =
+      editing.points != null ? editing.points : "";
     document.getElementById("calories").value = editing.calories;
     document.getElementById("description").value = editing.description;
     document.getElementById("satisfaction").value = editing.satisfaction;
@@ -173,6 +214,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   });
   tagEntry.addEventListener("input", (e) => {
     if (TAG_SPLIT.test(e.target.value)) commitTagEntry();
+  });
+
+  // Option entry: + button / Enter / comma all add the current option as a chip.
+  const optionEntry = document.getElementById("option-entry");
+  const addOptionBtn = document.getElementById("add-option-btn");
+  function commitOptionEntry() {
+    addOptionsFromInput(optionEntry.value);
+    optionEntry.value = "";
+    optionEntry.focus();
+  }
+  addOptionBtn.addEventListener("click", commitOptionEntry);
+  optionEntry.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitOptionEntry();
+    }
+  });
+  optionEntry.addEventListener("input", (e) => {
+    if (TAG_SPLIT.test(e.target.value)) commitOptionEntry();
   });
 
   document.getElementById("image-file").addEventListener("change", (e) => {
@@ -214,6 +274,8 @@ async function onSubmit(e) {
   e.preventDefault();
   const pending = document.getElementById("tag-entry").value;
   if (pending && pending.trim()) addTagsFromInput(pending);
+  const pendingOpt = document.getElementById("option-entry").value;
+  if (pendingOpt && pendingOpt.trim()) addOptionsFromInput(pendingOpt);
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.disabled = true;
@@ -221,6 +283,7 @@ async function onSubmit(e) {
   const idVal = document.getElementById("meal-id").value;
   const caloriesVal = document.getElementById("calories").value;
   const satisfactionVal = document.getElementById("satisfaction").value;
+  const pointsVal = document.getElementById("points").value;
 
   let imageUrl;
   try {
@@ -235,6 +298,8 @@ async function onSubmit(e) {
   const row = {
     title: document.getElementById("title").value.trim(),
     tags: [...tagsList],
+    options: [...optionsList],
+    points: pointsVal ? parseInt(pointsVal) : 0,
     calories: caloriesVal ? parseInt(caloriesVal) : null,
     description: document.getElementById("description").value,
     satisfaction: satisfactionVal ? parseInt(satisfactionVal) : null,

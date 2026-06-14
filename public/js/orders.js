@@ -38,6 +38,12 @@ function renderOrders() {
           <h3>${escO(o.meal_title)}</h3>
           <p class="order-customer">👤 <strong>${escO(o.customer_name)}</strong></p>
           ${
+            o.selected_options && o.selected_options.length
+              ? `<p class="order-opts-line">📝 ${escO(o.selected_options.join("، "))}</p>`
+              : ""
+          }
+          <p class="order-coins-line">🪙 ${o.points || 0} <span data-i18n="coins">coins</span></p>
+          ${
             o.note
               ? `<p class="order-note-line"><span data-i18n="orderNote">Note</span>: ${escO(
                   o.note

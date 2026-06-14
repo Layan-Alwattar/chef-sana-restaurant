@@ -18,6 +18,7 @@
     <a href="../index.html" data-i18n="home">Home</a>
     <a href="add.html" data-i18n="addMeal">Add Meal</a>
     <a href="orders.html" data-i18n="orders">Orders</a>
+    <a href="wallet.html" data-i18n="wallet">Wallet</a>
     <a href="summary.html" data-i18n="summary">Summary</a>
     <a href="account.html" data-i18n="myAccount">My Account</a>
     <a href="#" id="logout-link" data-i18n="logoutWord">Log out</a>
@@ -42,6 +43,17 @@
         </div>
         <div class="tag-chips" id="tag-chips"></div>
       </div>
+      <div class="tags-picker">
+        <label class="picker-label" data-i18n="mealOptions">Options (e.g. with sugar, no cheese)</label>
+        <div class="tag-entry-row">
+          <input type="text" id="option-entry" data-i18n-placeholder="addOptionHint"
+            placeholder="Type an option, then press + or Enter" />
+          <button type="button" id="add-option-btn" class="add-tag-btn" data-i18n-title="addOption" title="Add option">+</button>
+        </div>
+        <div class="tag-chips" id="option-chips"></div>
+      </div>
+      <label class="picker-label" data-i18n="mealPoints">Points (coins) 🪙</label>
+      <input type="number" id="points" min="0" data-i18n-placeholder="mealPointsHint" placeholder="e.g. 20" />
       <input type="number" id="calories" data-i18n-placeholder="mealCalories" placeholder="Calories" />
       <textarea id="description" data-i18n-placeholder="mealDescription" placeholder="Meal Description"></textarea>
       <input type="number" id="satisfaction" data-i18n-placeholder="mealSatisfaction" placeholder="Satisfaction (1-5)"

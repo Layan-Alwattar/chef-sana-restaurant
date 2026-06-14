@@ -20,6 +20,7 @@
     <a href="orders.html" data-admin-only data-i18n="orders">Orders</a>
     <a href="wallet.html" data-i18n="wallet">Wallet</a>
     <a href="summary.html" data-i18n="summary">Summary</a>
+    <a href="account.html" data-auth-out data-i18n="login">Log in</a>
     <a href="#" id="logout-link" data-auth-in data-i18n="logoutWord">Log out</a>
     <span class="lang-switcher">
       <select id="lang-select" aria-label="Language">
@@ -29,9 +30,8 @@
     </span>
   </nav>
   <div class="container">
-    <h1 data-i18n="ordersHeading">New Orders</h1>
-    <p id="orders-empty" data-i18n="noOrdersYet">No new orders right now.</p>
-    <div id="orders-list"></div>
+    <h1 data-i18n="walletTitle">🪙 Coins Wallet</h1>
+    <div id="wallet-content"></div>
   </div>
   <footer data-i18n="footerShort">2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا</footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -39,7 +39,7 @@
   <script src="../js/supabase.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/notify.js"></script>
-  <script src="../js/orders.js"></script>
+  <script src="../js/wallet.js"></script>
   <script>
     document.getElementById("logout-link").addEventListener("click", e => {
       e.preventDefault();

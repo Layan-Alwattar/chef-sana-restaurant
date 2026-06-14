@@ -182,6 +182,7 @@ function renderMeals(searchText = "") {
               .join(" ")}
           </p>
           <p><strong data-i18n="calories">Calories</strong>: ${meal.calories} <span data-i18n="kcal">kcal</span></p>
+          <p class="coins-line">🪙 <strong>${meal.points || 0}</strong> <span data-i18n="coins">coins</span></p>
           <p><strong data-i18n="satisfaction">Satisfaction</strong>: <span class="stars">${"⭐".repeat(
             meal.satisfaction || 0
           )}</span></p>
@@ -424,7 +425,9 @@ function ensureOrderModal() {
     <div class="modal-box">
       <h3 id="order-modal-title" data-i18n="orderTitle">Place an order</h3>
       <p class="order-meal-name" id="order-meal-name"></p>
+      <p class="order-coins" id="order-coins"></p>
       <form id="order-form">
+        <div id="order-options" class="order-options"></div>
         <input type="text" id="order-name" data-i18n-placeholder="yourName" placeholder="Your name" required />
         <textarea id="order-note" data-i18n-placeholder="orderNotePlaceholder" placeholder="Optional note or address..."></textarea>
         <div class="modal-actions">
@@ -448,6 +451,25 @@ function openOrderModal(meal) {
   _orderMeal = meal;
   const modal = document.getElementById("order-modal");
   modal.querySelector("#order-meal-name").textContent = meal.title;
+  modal.querySelector("#order-coins").innerHTML = `🪙 ${meal.points || 0} <span data-i18n="coins">coins</span>`;
+
+  // Build option checkboxes for this meal (if any).
+  const optWrap = modal.querySelector("#order-options");
+  if (meal.options && meal.options.length) {
+    optWrap.innerHTML =
+      `<div class="order-options-label" data-i18n="chooseOptions">Choose options</div>` +
+      meal.options
+        .map(
+          (o) =>
+            `<label class="opt-check"><input type="checkbox" value="${escapeHtml(
+              o
+            )}" /> <span>${escapeHtml(o)}</span></label>`
+        )
+        .join("");
+  } else {
+    optWrap.innerHTML = "";
+  }
+
   const nameInput = modal.querySelector("#order-name");
   const user = currentUser();
   nameInput.value =
@@ -474,14 +496,21 @@ async function submitOrder(e) {
     alert(t("pleaseName"));
     return;
   }
+  const selectedOptions = Array.from(
+    document.querySelectorAll("#order-options input[type=checkbox]:checked")
+  ).map((c) => c.value);
+
   const submitBtn = e.target.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.disabled = true;
 
+  const user = currentUser();
   const { error } = await sb.from("orders").insert({
     meal_id: meal.id,
     meal_title: meal.title,
     customer_name: name,
     note: note || null,
+    selected_options: selectedOptions,
+    user_id: user ? user.id : null,
   });
 
   if (error) {
@@ -493,7 +522,13 @@ async function submitOrder(e) {
   // Best-effort email to the chef; the order is already saved either way.
   try {
     await sb.functions.invoke("order-email", {
-      body: { meal_title: meal.title, customer_name: name, note },
+      body: {
+        meal_title: meal.title,
+        customer_name: name,
+        note,
+        options: selectedOptions,
+        coins: meal.points || 0,
+      },
     });
   } catch (err) {
     console.warn("order email failed (order still recorded):", err);
