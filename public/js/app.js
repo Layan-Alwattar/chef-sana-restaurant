@@ -4,6 +4,7 @@
 
 let mealsCache = [];
 let favoriteIds = new Set();
+let currentTag = null; // active category tab (null = All)
 
 // ---------- data loading ----------
 async function loadMeals() {
@@ -109,6 +110,31 @@ function translateWithin(root) {
   });
 }
 
+// Build the category tabs (one per tag, plus "All") from the loaded meals.
+function renderTabs() {
+  const wrap = document.getElementById("category-tabs");
+  if (!wrap) return;
+  const tags = [...new Set(mealsCache.flatMap((m) => m.tags || []))].sort();
+  let html = `<button class="cat-tab${currentTag ? "" : " active"}" data-tag="">${t(
+    "allCategory"
+  )}</button>`;
+  html += tags
+    .map(
+      (tag) =>
+        `<button class="cat-tab${
+          currentTag === tag ? " active" : ""
+        }" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`
+    )
+    .join("");
+  wrap.innerHTML = html;
+  wrap.querySelectorAll(".cat-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentTag = btn.getAttribute("data-tag") || null;
+      renderMeals(currentSearch());
+    });
+  });
+}
+
 // ---------- render ----------
 let _rendering = false;
 function renderMeals(searchText = "") {
@@ -122,9 +148,11 @@ function renderMeals(searchText = "") {
     return;
   }
   container.innerHTML = "";
+  renderTabs();
 
   mealsCache
     .filter((m) => matchesSearch(m, searchText))
+    .filter((m) => !currentTag || (m.tags || []).includes(currentTag))
     .forEach((meal) => {
       const card = document.createElement("div");
       card.className = "card";
@@ -173,9 +201,9 @@ function renderMeals(searchText = "") {
           <div class="reviews-section">
             <div class="reviews-header">
               <h4 data-i18n="reviews">Reviews</h4>
-              <button type="button" class="toggle-reviews-btn" data-i18n="hideReviews">Hide Reviews</button>
+              <button type="button" class="toggle-reviews-btn" data-i18n="showReviews">Show Reviews</button>
             </div>
-            <div class="reviews-body">
+            <div class="reviews-body hidden">
             <div class="reviews-list">${renderReviews(meal)}</div>
             <form class="review-form" data-meal-id="${meal.id}">
               <label class="rating-label" data-i18n="rateThisMeal">Rate this meal</label>

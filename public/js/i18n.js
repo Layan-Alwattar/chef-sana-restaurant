@@ -91,6 +91,12 @@ const I18N = {
     noFavoritesYet: "No favorites yet. Tap the heart on a meal to save it here.",
     newOrderTitle: "🛎️ New order!",
     viewMeal: "View meal →",
+    orders: "Orders",
+    ordersHeading: "New Orders",
+    markReady: "Ready ✓",
+    noOrdersYet: "No new orders right now.",
+    allCategory: "All",
+    orderNote: "Note",
     footer: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا",
     footerShort: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا"
   },
@@ -185,6 +191,12 @@ const I18N = {
     noFavoritesYet: "لا توجد مفضلة بعد. اضغط على القلب في أي وجبة لحفظها هنا.",
     newOrderTitle: "🛎️ طلب جديد!",
     viewMeal: "عرض الوجبة ←",
+    orders: "الطلبات",
+    ordersHeading: "الطلبات الجديدة",
+    markReady: "جاهز ✓",
+    noOrdersYet: "لا توجد طلبات جديدة حالياً.",
+    allCategory: "الكل",
+    orderNote: "ملاحظة",
     footer: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا",
     footerShort: "2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا"
   }
