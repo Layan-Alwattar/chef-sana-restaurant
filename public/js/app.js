@@ -549,8 +549,8 @@ function celebrateOrder(mealId) {
   bird.className = "order-bird";
   const img = document.createElement("img");
   img.src = location.pathname.includes("/pages/")
-    ? "../img/order-bird.png"
-    : "img/order-bird.png";
+    ? "../img/order-bird.gif"
+    : "img/order-bird.gif";
   img.alt = "";
   img.className = "order-bird-img";
   img.onerror = () => {
@@ -576,7 +576,7 @@ function celebrateOrder(mealId) {
     bird.style.marginInlineStart = "-65px";
   }
   document.body.appendChild(bird);
-  setTimeout(() => bird.remove(), 2600);
+  setTimeout(() => bird.remove(), 3400);
 }
 
 // ---------- realtime ----------
