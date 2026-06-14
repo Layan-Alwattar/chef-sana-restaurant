@@ -501,7 +501,7 @@ async function submitOrder(e) {
 
   if (submitBtn) submitBtn.disabled = false;
   closeOrderModal();
-  alert(t("orderSent"));
+  celebrateOrder(meal.id);
 }
 
 function toggleDescription(button) {
@@ -541,6 +541,43 @@ function revealMeal(mealId) {
   return true;
 }
 window.revealMeal = revealMeal;
+
+// Cheerful bird that pops up near the ordered meal as an order confirmation.
+// Uses public/img/order-bird.png; falls back to an emoji if that file isn't there.
+function celebrateOrder(mealId) {
+  const bird = document.createElement("div");
+  bird.className = "order-bird";
+  const img = document.createElement("img");
+  img.src = location.pathname.includes("/pages/")
+    ? "../img/order-bird.png"
+    : "img/order-bird.png";
+  img.alt = "";
+  img.className = "order-bird-img";
+  img.onerror = () => {
+    const e = document.createElement("span");
+    e.className = "order-bird-emoji";
+    e.textContent = "🐤";
+    bird.replaceChild(e, img);
+  };
+  bird.appendChild(img);
+  const cap = document.createElement("div");
+  cap.className = "order-bird-cap";
+  cap.textContent = t("orderSent");
+  bird.appendChild(cap);
+
+  const card = document.querySelector(`.card[data-meal-id="${mealId}"]`);
+  if (card) {
+    const r = card.getBoundingClientRect();
+    bird.style.left = window.scrollX + r.left + r.width / 2 - 65 + "px";
+    bird.style.top = window.scrollY + r.top + r.height / 2 - 80 + "px";
+  } else {
+    bird.style.left = "50%";
+    bird.style.top = "40%";
+    bird.style.marginInlineStart = "-65px";
+  }
+  document.body.appendChild(bird);
+  setTimeout(() => bird.remove(), 2600);
+}
 
 // ---------- realtime ----------
 let _reloadTimer = null;

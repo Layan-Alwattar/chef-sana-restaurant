@@ -892,3 +892,49 @@ html[dir="rtl"] .order-card h3 {
 .ready-btn:hover {
   background: #1b5e20;
 }
+
+/* ---------- Order confirmation bird ---------- */
+.order-bird {
+  position: absolute;
+  z-index: 1500;
+  pointer-events: none;
+  width: 130px;
+  text-align: center;
+  transform-origin: bottom center;
+  animation: order-bird-anim 2.5s ease forwards;
+}
+.order-bird-img {
+  width: 130px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+}
+.order-bird-emoji {
+  font-size: 96px;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+}
+.order-bird-cap {
+  margin-top: 0.25rem;
+  display: inline-block;
+  background: #2e7d32;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 14px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+@keyframes order-bird-anim {
+  0%   { opacity: 0; transform: translateY(25px) scale(0.4); }
+  14%  { opacity: 1; transform: translateY(0) scale(1.12); }
+  24%  { transform: translateY(0) scale(1) rotate(-7deg); }
+  34%  { transform: rotate(7deg); }
+  44%  { transform: rotate(-5deg); }
+  54%  { transform: rotate(3deg); }
+  64%  { transform: rotate(0deg); }
+  82%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-45px) scale(0.92); }
+}
