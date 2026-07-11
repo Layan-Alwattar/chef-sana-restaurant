@@ -149,3 +149,81 @@ document.addEventListener("authchange", (e) => {
   await authReady;
   if (isAdmin()) startOrderAlerts();
 })();
+
+/* ============================================================
+   Customer side: "your order is ready" alert.
+   Chef Sana's dashboard broadcasts on a channel named after this
+   browser's private token, so only the person who ordered sees it.
+   ============================================================ */
+
+function showReadyBird(mealTitle, quantity) {
+  const overlay = document.createElement("div");
+  overlay.className = "ready-overlay";
+
+  const box = document.createElement("div");
+  box.className = "ready-box";
+
+  const img = document.createElement("img");
+  img.src = location.pathname.includes("/pages/")
+    ? "../img/order-bird.gif"
+    : "img/order-bird.gif";
+  img.alt = "";
+  img.className = "ready-bird-img";
+  img.onerror = () => {
+    const e = document.createElement("div");
+    e.className = "ready-bird-emoji";
+    e.textContent = "🐤";
+    box.replaceChild(e, img);
+  };
+  box.appendChild(img);
+
+  const title = document.createElement("h2");
+  title.textContent = t("orderReadyTitle");
+  box.appendChild(title);
+
+  const meal = document.createElement("p");
+  meal.className = "ready-meal";
+  meal.textContent = quantity > 1 ? `${mealTitle} × ${quantity}` : mealTitle;
+  box.appendChild(meal);
+
+  const sub = document.createElement("p");
+  sub.className = "ready-sub";
+  sub.textContent = t("orderReadyBody");
+  box.appendChild(sub);
+
+  const btn = document.createElement("button");
+  btn.textContent = t("close");
+  btn.addEventListener("click", () => overlay.remove());
+  box.appendChild(btn);
+
+  overlay.appendChild(box);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+}
+
+function notifyOrderReady(payload) {
+  const meal = (payload && payload.meal_title) || "";
+  const qty = (payload && payload.quantity) || 1;
+  _playChime();
+  showReadyBird(meal, qty);
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(t("orderReadyTitle"), {
+        body: meal,
+        icon: _faviconHref(),
+      });
+    } catch (_e) {
+      /* ignore */
+    }
+  }
+}
+
+// Listen on this browser's private channel for its own order-ready pings.
+(function startReadyListener() {
+  const token = getClientToken();
+  sb.channel(`ready-${token}`)
+    .on("broadcast", { event: "order_ready" }, ({ payload }) => notifyOrderReady(payload))
+    .subscribe();
+})();

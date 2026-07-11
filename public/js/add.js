@@ -85,6 +85,88 @@ function addOptionsFromInput(rawText) {
   if (added) renderOptionChips();
 }
 
+// ---- Categories (a meal may belong to several) ----
+let allCategories = [];
+let selectedCategoryIds = new Set();
+
+async function loadCategoriesForForm() {
+  const { data, error } = await sb
+    .from("categories")
+    .select("id,name")
+    .order("position", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) {
+    console.error("Failed to load categories:", error);
+    return;
+  }
+  allCategories = data || [];
+}
+
+function renderCategoryChecks() {
+  const wrap = document.getElementById("category-checks");
+  const hint = document.getElementById("category-hint");
+  if (!wrap) return;
+  hint.hidden = allCategories.length > 0;
+  wrap.innerHTML = allCategories
+    .map(
+      (c) => `
+      <label class="opt-check">
+        <input type="checkbox" value="${c.id}" ${selectedCategoryIds.has(c.id) ? "checked" : ""} />
+        <span>${escHtml(c.name)}</span>
+      </label>`
+    )
+    .join("");
+  wrap.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const id = parseInt(cb.value);
+      if (cb.checked) selectedCategoryIds.add(id);
+      else selectedCategoryIds.delete(id);
+    });
+  });
+}
+
+async function createCategoryInline(name) {
+  const clean = (name || "").trim();
+  if (!clean) return;
+  const existing = allCategories.find(
+    (c) => c.name.toLowerCase() === clean.toLowerCase()
+  );
+  if (existing) {
+    selectedCategoryIds.add(existing.id);
+    renderCategoryChecks();
+    return;
+  }
+  const { data, error } = await sb
+    .from("categories")
+    .insert({ name: clean, position: allCategories.length })
+    .select("id,name")
+    .single();
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  allCategories.push(data);
+  selectedCategoryIds.add(data.id);
+  renderCategoryChecks();
+}
+
+// Replace the meal's category links with the current selection.
+async function saveMealCategories(mealId) {
+  const { error: delErr } = await sb
+    .from("meal_categories")
+    .delete()
+    .eq("meal_id", mealId);
+  if (delErr) throw delErr;
+  const rows = [...selectedCategoryIds].map((cid) => ({
+    meal_id: mealId,
+    category_id: cid,
+  }));
+  if (rows.length) {
+    const { error: insErr } = await sb.from("meal_categories").insert(rows);
+    if (insErr) throw insErr;
+  }
+}
+
 const MAX_IMAGE_WIDTH = 1000; // downscale uploads/pastes before storing
 const JPEG_QUALITY = 0.85;
 
@@ -174,8 +256,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     return;
   }
 
+  await loadCategoriesForForm();
+
   const editing = JSON.parse(localStorage.getItem("editingMeal") || "null");
   if (editing) {
+    // meal_categories comes back from the home page query as [{category_id}, ...]
+    selectedCategoryIds = new Set(
+      (editing.meal_categories || []).map((mc) => mc.category_id)
+    );
     document.getElementById("page-title").setAttribute("data-i18n", "pageTitleEdit");
     document.getElementById("page-title").textContent = t("pageTitleEdit");
     document.getElementById("meal-id").value = editing.id;
@@ -197,6 +285,24 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     localStorage.removeItem("editingMeal");
   }
+
+  renderCategoryChecks();
+
+  // Create a new category straight from the meal form.
+  const newCatInput = document.getElementById("new-category");
+  const addCatBtn = document.getElementById("add-category-btn");
+  async function commitNewCategory() {
+    await createCategoryInline(newCatInput.value);
+    newCatInput.value = "";
+    newCatInput.focus();
+  }
+  addCatBtn.addEventListener("click", commitNewCategory);
+  newCatInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitNewCategory();
+    }
+  });
 
   const tagEntry = document.getElementById("tag-entry");
   const addTagBtn = document.getElementById("add-tag-btn");
@@ -307,15 +413,27 @@ async function onSubmit(e) {
   };
 
   let error;
-  if (idVal) {
-    ({ error } = await sb.from("meals").update(row).eq("id", parseInt(idVal)));
+  let mealId = idVal ? parseInt(idVal) : null;
+  if (mealId) {
+    ({ error } = await sb.from("meals").update(row).eq("id", mealId));
   } else {
-    ({ error } = await sb.from("meals").insert(row));
+    const res = await sb.from("meals").insert(row).select("id").single();
+    error = res.error;
+    if (res.data) mealId = res.data.id;
   }
 
   if (error) {
     console.error(error);
     alert(error.message);
+    if (submitBtn) submitBtn.disabled = false;
+    return;
+  }
+
+  try {
+    await saveMealCategories(mealId);
+  } catch (err) {
+    console.error("Failed to save categories:", err);
+    alert(err.message || String(err));
     if (submitBtn) submitBtn.disabled = false;
     return;
   }

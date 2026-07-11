@@ -35,7 +35,7 @@ function renderOrders() {
       (o) => `
       <div class="order-card" data-order-id="${o.id}">
         <div class="order-card-body">
-          <h3>${escO(o.meal_title)}</h3>
+          <h3>${escO(o.meal_title)} <span class="order-qty-badge">× ${o.quantity || 1}</span></h3>
           <p class="order-customer">👤 <strong>${escO(o.customer_name)}</strong></p>
           ${
             o.selected_options && o.selected_options.length
@@ -64,11 +64,36 @@ function renderOrders() {
 }
 
 async function markReady(id) {
+  const order = ordersCache.find((o) => o.id === id);
   const { error } = await sb.from("orders").update({ status: "ready" }).eq("id", id);
   if (error) {
     alert(error.message);
     return;
   }
+
+  // 1) Ping the customer's browser (if they still have the site open).
+  if (order && order.client_token) {
+    try {
+      const ch = sb.channel(`ready-${order.client_token}`);
+      await ch.subscribe();
+      await ch.send({
+        type: "broadcast",
+        event: "order_ready",
+        payload: { meal_title: order.meal_title, quantity: order.quantity || 1 },
+      });
+      sb.removeChannel(ch);
+    } catch (err) {
+      console.warn("ready broadcast failed:", err);
+    }
+  }
+
+  // 2) Email them (only if they left an address). Recipient is read server-side.
+  try {
+    await sb.functions.invoke("order-ready-email", { body: { order_id: id } });
+  } catch (err) {
+    console.warn("ready email failed (order still marked ready):", err);
+  }
+
   ordersCache = ordersCache.filter((o) => o.id !== id);
   renderOrders();
 }

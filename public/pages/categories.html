@@ -16,13 +16,11 @@
 <body>
   <nav>
     <a href="../index.html" data-i18n="home">Home</a>
-    <a href="summary.html" data-i18n="summary">Summary</a>
     <a href="add.html" data-admin-only data-i18n="addMeal">Add Meal</a>
     <a href="categories.html" data-admin-only data-i18n="categories">Categories</a>
     <a href="orders.html" data-admin-only data-i18n="orders">Orders</a>
     <a href="wallet.html" data-i18n="wallet">Wallet</a>
-    <a href="account.html" data-auth-out data-i18n="login">Log in</a>
-    <a href="account.html" data-auth-in data-i18n="myAccount">My Account</a>
+    <a href="summary.html" data-i18n="summary">Summary</a>
     <a href="#" id="logout-link" data-auth-in data-i18n="logoutWord">Log out</a>
     <span class="lang-switcher">
       <select id="lang-select" aria-label="Language">
@@ -31,19 +29,15 @@
       </select>
     </span>
   </nav>
-  <div class="container">
-    <h1 data-i18n="summaryHeading">Meal Summary</h1>
-    <p data-i18n="summarySubtitle">Summary of meals grouped by tags.</p>
-    <table class="summary-table">
-      <thead>
-        <tr>
-          <th data-i18n="tag">Tag</th>
-          <th data-i18n="totalMeals">Total Meals</th>
-          <th data-i18n="avgSatisfaction">Avg Satisfaction</th>
-        </tr>
-      </thead>
-      <tbody id="summary-body"></tbody>
-    </table>
+  <div class="container narrow">
+    <h1 data-i18n="categoriesTitle">Manage Categories</h1>
+    <form id="cat-form" class="cat-form">
+      <input type="text" id="cat-name" data-i18n-placeholder="categoryNamePlaceholder"
+        placeholder="New category name (e.g. Drinks)" required />
+      <button type="submit" data-i18n="addCategory">Add</button>
+    </form>
+    <p id="cat-empty" data-i18n="noCategories">No categories yet. Add your first one above!</p>
+    <div id="cat-list"></div>
   </div>
   <footer data-i18n="footerShort">2026، مطعم الشيف سنا — فَإِذَا طَعِمْتُمْ فَانتَشِرُوا</footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -51,7 +45,7 @@
   <script src="../js/supabase.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/notify.js"></script>
-  <script src="../js/summary.js"></script>
+  <script src="../js/categories.js"></script>
   <script>
     document.getElementById("logout-link").addEventListener("click", e => {
       e.preventDefault();

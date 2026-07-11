@@ -4,19 +4,37 @@
 
 let mealsCache = [];
 let favoriteIds = new Set();
-let currentTag = null; // active category tab (null = All)
+let categoriesCache = [];
+let currentCategoryId = null; // active category tab (null = All)
 
 // ---------- data loading ----------
 async function loadMeals() {
   const { data, error } = await sb
     .from("meals")
-    .select("*, reviews(id,name,rating,comment,created_at)")
+    .select("*, reviews(id,name,rating,comment,created_at), meal_categories(category_id)")
     .order("created_at", { ascending: true });
   if (error) {
     console.error("Failed to load meals:", error);
     return;
   }
   mealsCache = data || [];
+}
+
+async function loadCategories() {
+  const { data, error } = await sb
+    .from("categories")
+    .select("id,name")
+    .order("position", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) {
+    console.error("Failed to load categories:", error);
+    return;
+  }
+  categoriesCache = data || [];
+}
+
+function mealInCategory(meal, categoryId) {
+  return (meal.meal_categories || []).some((mc) => mc.category_id === categoryId);
 }
 
 async function loadFavorites() {
@@ -110,26 +128,30 @@ function translateWithin(root) {
   });
 }
 
-// Build the category tabs (one per tag, plus "All") from the loaded meals.
+// Build the menu tabs from the admin-defined categories (plus "All").
 function renderTabs() {
   const wrap = document.getElementById("category-tabs");
   if (!wrap) return;
-  const tags = [...new Set(mealsCache.flatMap((m) => m.tags || []))].sort();
-  let html = `<button class="cat-tab${currentTag ? "" : " active"}" data-tag="">${t(
-    "allCategory"
-  )}</button>`;
-  html += tags
+  if (!categoriesCache.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+  let html = `<button class="cat-tab${
+    currentCategoryId ? "" : " active"
+  }" data-cat="">${t("allCategory")}</button>`;
+  html += categoriesCache
     .map(
-      (tag) =>
+      (c) =>
         `<button class="cat-tab${
-          currentTag === tag ? " active" : ""
-        }" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`
+          currentCategoryId === c.id ? " active" : ""
+        }" data-cat="${c.id}">${escapeHtml(c.name)}</button>`
     )
     .join("");
   wrap.innerHTML = html;
   wrap.querySelectorAll(".cat-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
-      currentTag = btn.getAttribute("data-tag") || null;
+      const raw = btn.getAttribute("data-cat");
+      currentCategoryId = raw ? parseInt(raw) : null;
       renderMeals(currentSearch());
     });
   });
@@ -152,7 +174,7 @@ function renderMeals(searchText = "") {
 
   mealsCache
     .filter((m) => matchesSearch(m, searchText))
-    .filter((m) => !currentTag || (m.tags || []).includes(currentTag))
+    .filter((m) => !currentCategoryId || mealInCategory(m, currentCategoryId))
     .forEach((meal) => {
       const card = document.createElement("div");
       card.className = "card";
@@ -428,7 +450,17 @@ function ensureOrderModal() {
       <p class="order-coins" id="order-coins"></p>
       <form id="order-form">
         <div id="order-options" class="order-options"></div>
+        <div class="qty-row">
+          <span class="qty-label" data-i18n="quantity">Quantity</span>
+          <div class="qty-stepper">
+            <button type="button" id="qty-minus" aria-label="-">−</button>
+            <input type="number" id="order-qty" min="1" step="1" value="1" />
+            <button type="button" id="qty-plus" aria-label="+">+</button>
+          </div>
+        </div>
         <input type="text" id="order-name" data-i18n-placeholder="yourName" placeholder="Your name" required />
+        <input type="email" id="order-email" data-i18n-placeholder="yourEmail" placeholder="Your email (optional)" />
+        <small class="email-hint" data-i18n="emailForReady">We'll email you when your order is ready.</small>
         <textarea id="order-note" data-i18n-placeholder="orderNotePlaceholder" placeholder="Optional note or address..."></textarea>
         <div class="modal-actions">
           <button type="button" id="order-cancel" class="btn-secondary" data-i18n="cancel">Cancel</button>
@@ -444,6 +476,30 @@ function ensureOrderModal() {
   });
   modal.querySelector("#order-cancel").addEventListener("click", closeOrderModal);
   modal.querySelector("#order-form").addEventListener("submit", submitOrder);
+
+  // Quantity stepper — open-ended upwards, never below 1.
+  const qtyInput = modal.querySelector("#order-qty");
+  const setQty = (n) => {
+    qtyInput.value = Math.max(1, n || 1);
+    updateOrderCoins();
+  };
+  modal.querySelector("#qty-minus").addEventListener("click", () =>
+    setQty(parseInt(qtyInput.value) - 1)
+  );
+  modal.querySelector("#qty-plus").addEventListener("click", () =>
+    setQty(parseInt(qtyInput.value) + 1)
+  );
+  qtyInput.addEventListener("input", updateOrderCoins);
+  qtyInput.addEventListener("blur", () => setQty(parseInt(qtyInput.value)));
+}
+
+// Show the live coin total (meal points × quantity) in the order modal.
+function updateOrderCoins() {
+  if (!_orderMeal) return;
+  const qty = Math.max(1, parseInt(document.getElementById("order-qty").value) || 1);
+  const total = (_orderMeal.points || 0) * qty;
+  const el = document.getElementById("order-coins");
+  if (el) el.innerHTML = `🪙 ${total} <span data-i18n="coins">coins</span>`;
 }
 
 function openOrderModal(meal) {
@@ -451,7 +507,8 @@ function openOrderModal(meal) {
   _orderMeal = meal;
   const modal = document.getElementById("order-modal");
   modal.querySelector("#order-meal-name").textContent = meal.title;
-  modal.querySelector("#order-coins").innerHTML = `🪙 ${meal.points || 0} <span data-i18n="coins">coins</span>`;
+  modal.querySelector("#order-qty").value = 1;
+  updateOrderCoins();
 
   // Build option checkboxes for this meal (if any).
   const optWrap = modal.querySelector("#order-options");
@@ -474,6 +531,7 @@ function openOrderModal(meal) {
   const user = currentUser();
   nameInput.value =
     (user && (user.user_metadata?.name || user.email?.split("@")[0])) || "";
+  modal.querySelector("#order-email").value = (user && user.email) || "";
   modal.querySelector("#order-note").value = "";
   modal.classList.remove("hidden");
   translateWithin(modal);
@@ -492,6 +550,8 @@ async function submitOrder(e) {
   const meal = _orderMeal;
   const name = document.getElementById("order-name").value.trim();
   const note = document.getElementById("order-note").value.trim();
+  const email = document.getElementById("order-email").value.trim();
+  const quantity = Math.max(1, parseInt(document.getElementById("order-qty").value) || 1);
   if (!name) {
     alert(t("pleaseName"));
     return;
@@ -508,9 +568,12 @@ async function submitOrder(e) {
     meal_id: meal.id,
     meal_title: meal.title,
     customer_name: name,
+    customer_email: email || null,
     note: note || null,
+    quantity,
     selected_options: selectedOptions,
     user_id: user ? user.id : null,
+    client_token: getClientToken(),
   });
 
   if (error) {
@@ -527,7 +590,8 @@ async function submitOrder(e) {
         customer_name: name,
         note,
         options: selectedOptions,
-        coins: meal.points || 0,
+        coins: (meal.points || 0) * quantity,
+        quantity,
       },
     });
   } catch (err) {
@@ -619,22 +683,28 @@ let _reloadTimer = null;
 function scheduleReload() {
   clearTimeout(_reloadTimer);
   _reloadTimer = setTimeout(async () => {
-    await loadMeals();
+    await Promise.all([loadMeals(), loadCategories()]);
+    // A deleted category shouldn't leave us stuck on an empty tab.
+    if (currentCategoryId && !categoriesCache.some((c) => c.id === currentCategoryId)) {
+      currentCategoryId = null;
+    }
     renderMeals(currentSearch());
   }, 350);
 }
 
 function subscribeRealtime() {
-  sb.channel("public-meals-reviews")
+  sb.channel("public-menu-changes")
     .on("postgres_changes", { event: "*", schema: "public", table: "meals" }, scheduleReload)
     .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, scheduleReload)
+    .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, scheduleReload)
+    .on("postgres_changes", { event: "*", schema: "public", table: "meal_categories" }, scheduleReload)
     .subscribe();
 }
 
 // ---------- boot ----------
 document.addEventListener("DOMContentLoaded", async () => {
   await authReady;
-  await Promise.all([loadMeals(), loadFavorites()]);
+  await Promise.all([loadMeals(), loadFavorites(), loadCategories()]);
   renderMeals();
   subscribeRealtime();
 

@@ -11,3 +11,23 @@ const SUPABASE_ANON_KEY =
 // `window.supabase` is the library global from the CDN bundle.
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.sb = sb;
+
+// A private, random per-browser id saved with each order. It lets THIS browser
+// receive its own "order is ready" alert (over a realtime broadcast channel
+// named after the token) without being able to see anyone else's orders.
+const CLIENT_TOKEN_KEY = "csr_client_token";
+function getClientToken() {
+  let token = localStorage.getItem(CLIENT_TOKEN_KEY);
+  if (!token) {
+    token =
+      window.crypto && crypto.randomUUID
+        ? crypto.randomUUID()
+        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          });
+    localStorage.setItem(CLIENT_TOKEN_KEY, token);
+  }
+  return token;
+}

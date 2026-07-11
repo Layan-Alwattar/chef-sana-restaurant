@@ -1110,6 +1110,178 @@ html[dir="rtl"] .wallet-h2 {
   padding: 2rem;
 }
 
+/* ---------- Quantity stepper (order modal) ---------- */
+.qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.qty-label {
+  font-weight: bold;
+  color: #333;
+}
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.qty-stepper button {
+  margin: 0;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: 1.4rem;
+  font-weight: bold;
+  line-height: 1;
+  background: #2e7d32;
+  border-radius: 8px;
+}
+.qty-stepper button:hover {
+  background: #1b5e20;
+}
+.qty-stepper input {
+  width: 70px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: bold;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.email-hint {
+  margin-top: -0.4rem;
+  color: #777;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* ---------- Categories ---------- */
+.category-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.category-checks .opt-check {
+  flex: 0 1 auto;
+}
+.cat-form {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.cat-form input {
+  flex: 1;
+}
+.cat-form button {
+  margin: 0;
+  width: auto;
+  background: #2e7d32;
+}
+.cat-form button:hover {
+  background: #1b5e20;
+}
+.cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-left: 5px solid #2e7d32;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.6rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+html[dir="rtl"] .cat-row {
+  border-left: none;
+  border-right: 5px solid #2e7d32;
+}
+.cat-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+.cat-del {
+  margin: 0;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+/* ---------- Orders dashboard: quantity badge ---------- */
+.order-qty-badge {
+  display: inline-block;
+  background: #2e7d32;
+  color: #fff;
+  font-size: 0.95rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 12px;
+  vertical-align: middle;
+}
+
+/* ---------- "Your order is ready" overlay (customer) ---------- */
+.ready-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+  padding: 1rem;
+  animation: fade-in 0.25s ease;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ready-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2rem 2.2rem;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  animation: modal-pop 0.3s ease;
+}
+.ready-bird-img {
+  width: 150px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.ready-bird-emoji {
+  font-size: 110px;
+  line-height: 1;
+}
+.ready-box h2 {
+  margin: 0.5rem 0 0.25rem;
+  color: #2e7d32;
+  font-family: 'Playfair Display', serif;
+}
+html[dir="rtl"] .ready-box h2 {
+  font-family: 'Amiri', serif;
+}
+.ready-meal {
+  margin: 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #222;
+}
+.ready-sub {
+  margin: 0.25rem 0 0.5rem;
+  color: #666;
+}
+.ready-box button {
+  background: #2e7d32;
+  padding: 0.6rem 1.8rem;
+}
+.ready-box button:hover {
+  background: #1b5e20;
+}
+
 /* ---------- Order confirmation bird ---------- */
 .order-bird {
   position: absolute;
