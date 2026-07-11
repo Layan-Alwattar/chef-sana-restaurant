@@ -75,6 +75,7 @@ async function loadFavoritesView() {
     card.className = "card fav-card";
     card.innerHTML = `
       <div class="meal-img-wrap">
+        <img src="${escAttr(m.image) || "https://via.placeholder.com/150"}" alt="" aria-hidden="true" class="meal-img-blur"/>
         <img src="${escAttr(m.image) || "https://via.placeholder.com/150"}" alt="${escAttr(
       m.title
     )}" class="meal-img"/>

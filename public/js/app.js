@@ -183,6 +183,7 @@ function renderMeals(searchText = "") {
       const isFav = favoriteIds.has(meal.id);
       card.innerHTML = `
         <div class="meal-img-wrap">
+          <img src="${escapeHtml(meal.image) || "https://via.placeholder.com/150"}" alt="" aria-hidden="true" class="meal-img-blur"/>
           <img src="${escapeHtml(meal.image) || "https://via.placeholder.com/150"}" alt="${escapeHtml(
         meal.title
       )}" class="meal-img"/>

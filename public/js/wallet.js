@@ -99,6 +99,7 @@ async function renderAdminWallet(box) {
         <span class="lb-name">${wEsc(name)}</span>
         <span class="lb-orders">${s.orders} <span data-i18n="ordersWord">orders</span></span>
         <span class="lb-coins">🪙 ${s.coins}</span>
+        <button class="lb-reset" data-name="${wEsc(name)}" data-i18n="resetPerson" title="Reset">Reset</button>
       </div>`;
     })
     .join("");
@@ -122,7 +123,39 @@ async function renderAdminWallet(box) {
 
     <h2 class="wallet-h2" data-i18n="leaderboard">Top players</h2>
     <div class="leaderboard">${rows}</div>
+
+    <div class="wallet-reset-row">
+      <button id="reset-all-coins" class="reset-coins-btn" data-i18n="resetAllCoins">Reset all coins</button>
+    </div>
   `;
+
+  const resetAllBtn = box.querySelector("#reset-all-coins");
+  if (resetAllBtn) resetAllBtn.addEventListener("click", resetAllCoins);
+  box.querySelectorAll(".lb-reset").forEach((btn) => {
+    btn.addEventListener("click", () => resetPersonCoins(btn.getAttribute("data-name")));
+  });
+}
+
+// Zero everyone's coins. Order history is kept; only the points totals are cleared.
+async function resetAllCoins() {
+  if (!confirm(t("confirmResetAll"))) return;
+  const { error } = await sb.from("orders").update({ points: 0 }).gte("id", 0);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  renderWallet();
+}
+
+// Zero one person's coins (matched by the name shown on their orders).
+async function resetPersonCoins(name) {
+  if (!confirm(t("confirmResetPerson"))) return;
+  const { error } = await sb.from("orders").update({ points: 0 }).eq("customer_name", name);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  renderWallet();
 }
 
 async function renderUserWallet(box, user) {

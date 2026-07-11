@@ -129,10 +129,31 @@ nav a {
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
 }
 
-.meal-img {
+/* Meal photo: show the WHOLE dish (contain), with a blurred copy of the same
+   photo filling any empty space so cards stay neat and equal height. */
+.meal-img-wrap {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+  background: #eee;
+}
+.meal-img-blur {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 200px;
+  height: 100%;
   object-fit: cover;
+  filter: blur(16px) brightness(0.92);
+  transform: scale(1.2); /* hides the soft blurred edges */
+  z-index: 0;
+}
+.meal-img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .card-content {
@@ -1066,6 +1087,27 @@ html[dir="rtl"] .wallet-h2 {
   font-weight: bold;
   color: #b8860b;
   font-size: 1.1rem;
+}
+.lb-reset {
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  background: #b0b0b0;
+}
+.lb-reset:hover {
+  background: #8a8a8a;
+}
+.wallet-reset-row {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+.reset-coins-btn {
+  background: #c62828;
+  padding: 0.6rem 1.5rem;
+  font-weight: bold;
+}
+.reset-coins-btn:hover {
+  background: #a32020;
 }
 
 /* Personal + guest views */
